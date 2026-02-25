@@ -83,15 +83,22 @@ interface StoreState {
   labResults: LabResult[];
   foodLog: FoodLogEntry[];
   journalEntries: JournalEntry[];
+  customLabTests: import('@/lib/constants').LabTestDef[];
+  customFoods: import('@/lib/constants').FoodItem[];
   setProfile: (p: Profile) => void;
   addMedication: (m: Medication) => void;
   removeMedication: (id: string) => void;
   addMedicationLog: (l: MedicationLog) => void;
   addSideEffect: (s: SideEffect) => void;
   addLabResult: (r: LabResult) => void;
+  updateLabResult: (r: LabResult) => void;
+  removeLabResult: (id: string) => void;
   addFoodLogEntry: (e: FoodLogEntry) => void;
+  removeFoodLogEntry: (id: string) => void;
   addJournalEntry: (e: JournalEntry) => void;
   updateJournalEntry: (e: JournalEntry) => void;
+  addCustomLabTest: (t: import('@/lib/constants').LabTestDef) => void;
+  addCustomFood: (f: import('@/lib/constants').FoodItem) => void;
 }
 
 const StoreContext = createContext<StoreState | null>(null);
@@ -115,6 +122,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [labResults, setLabResults] = useState<LabResult[]>(loadLS('labResults', []));
   const [foodLog, setFoodLog] = useState<FoodLogEntry[]>(loadLS('foodLog', []));
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(loadLS('journalEntries', []));
+  const [customLabTests, setCustomLabTests] = useState<import('@/lib/constants').LabTestDef[]>(loadLS('customLabTests', []));
+  const [customFoods, setCustomFoods] = useState<import('@/lib/constants').FoodItem[]>(loadLS('customFoods', []));
 
   useEffect(() => { saveLS('profile', profile); }, [profile]);
   useEffect(() => { saveLS('medications', medications); }, [medications]);
@@ -123,6 +132,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { saveLS('labResults', labResults); }, [labResults]);
   useEffect(() => { saveLS('foodLog', foodLog); }, [foodLog]);
   useEffect(() => { saveLS('journalEntries', journalEntries); }, [journalEntries]);
+  useEffect(() => { saveLS('customLabTests', customLabTests); }, [customLabTests]);
+  useEffect(() => { saveLS('customFoods', customFoods); }, [customFoods]);
 
   const setProfile = useCallback((p: Profile) => _setProfile(p), []);
   const addMedication = useCallback((m: Medication) => setMedications(prev => [...prev, m]), []);
@@ -130,15 +141,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addMedicationLog = useCallback((l: MedicationLog) => setMedicationLogs(prev => [...prev, l]), []);
   const addSideEffect = useCallback((s: SideEffect) => setSideEffects(prev => [...prev, s]), []);
   const addLabResult = useCallback((r: LabResult) => setLabResults(prev => [...prev, r]), []);
+  const updateLabResult = useCallback((r: LabResult) => setLabResults(prev => prev.map(l => l.id === r.id ? r : l)), []);
+  const removeLabResult = useCallback((id: string) => setLabResults(prev => prev.filter(l => l.id !== id)), []);
   const addFoodLogEntry = useCallback((e: FoodLogEntry) => setFoodLog(prev => [...prev, e]), []);
+  const removeFoodLogEntry = useCallback((id: string) => setFoodLog(prev => prev.filter(f => f.id !== id)), []);
   const addJournalEntry = useCallback((e: JournalEntry) => setJournalEntries(prev => [...prev, e]), []);
   const updateJournalEntry = useCallback((e: JournalEntry) => setJournalEntries(prev => prev.map(j => j.id === e.id ? e : j)), []);
+  const addCustomLabTest = useCallback((t: import('@/lib/constants').LabTestDef) => setCustomLabTests(prev => [...prev, t]), []);
+  const addCustomFood = useCallback((f: import('@/lib/constants').FoodItem) => setCustomFoods(prev => [...prev, f]), []);
 
   return (
     <StoreContext.Provider value={{
       profile, medications, medicationLogs, sideEffects, labResults, foodLog, journalEntries,
+      customLabTests, customFoods,
       setProfile, addMedication, removeMedication, addMedicationLog, addSideEffect,
-      addLabResult, addFoodLogEntry, addJournalEntry, updateJournalEntry,
+      addLabResult, updateLabResult, removeLabResult,
+      addFoodLogEntry, removeFoodLogEntry, addJournalEntry, updateJournalEntry,
+      addCustomLabTest, addCustomFood,
     }}>
       {children}
     </StoreContext.Provider>

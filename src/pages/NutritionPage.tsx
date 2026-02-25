@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useStore, generateId, getTodayStr, type FoodLogEntry } from '@/lib/store';
-import { FOOD_DATABASE, rateFoodForConditions } from '@/lib/constants';
-import { Search, Plus, X } from 'lucide-react';
+import { FOOD_DATABASE, rateFoodForConditions, type FoodItem } from '@/lib/constants';
+import { Search, Plus, X, Trash2 } from 'lucide-react';
 
 const MEALS = [
   { value: 'breakfast' as const, label: 'فطور' },
@@ -11,11 +11,22 @@ const MEALS = [
 ];
 
 const NutritionPage = () => {
-  const { profile, foodLog, addFoodLogEntry } = useStore();
+  const { profile, foodLog, addFoodLogEntry, removeFoodLogEntry, customFoods, addCustomFood } = useStore();
   const [search, setSearch] = useState('');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [showSearch, setShowSearch] = useState(false);
+  const [showCustomFood, setShowCustomFood] = useState(false);
   const today = getTodayStr();
+
+  // Custom food form
+  const [cfName, setCfName] = useState('');
+  const [cfCalories, setCfCalories] = useState('');
+  const [cfCarbs, setCfCarbs] = useState('');
+  const [cfProtein, setCfProtein] = useState('');
+  const [cfFat, setCfFat] = useState('');
+  const [cfSodium, setCfSodium] = useState('');
+  const [cfPotassium, setCfPotassium] = useState('');
+  const [cfSugar, setCfSugar] = useState('');
 
   const todayLog = foodLog.filter(f => f.date === today);
   const totalCalories = todayLog.reduce((s, f) => s + f.calories, 0);
@@ -25,12 +36,14 @@ const NutritionPage = () => {
 
   const conditions = profile?.conditions || [];
 
-  const filteredFoods = useMemo(() => {
-    if (!search) return FOOD_DATABASE;
-    return FOOD_DATABASE.filter(f => f.name.includes(search));
-  }, [search]);
+  const allFoods = useMemo(() => [...FOOD_DATABASE, ...customFoods], [customFoods]);
 
-  const handleAddFood = (food: typeof FOOD_DATABASE[0]) => {
+  const filteredFoods = useMemo(() => {
+    if (!search) return allFoods;
+    return allFoods.filter(f => f.name.includes(search));
+  }, [search, allFoods]);
+
+  const handleAddFood = (food: FoodItem) => {
     const entry: FoodLogEntry = {
       id: generateId(), date: today, meal: selectedMeal,
       foodName: food.name, calories: food.calories,
@@ -40,6 +53,21 @@ const NutritionPage = () => {
     addFoodLogEntry(entry);
     setShowSearch(false);
     setSearch('');
+  };
+
+  const handleAddCustomFood = () => {
+    if (!cfName || !cfCalories) return;
+    const newFood: FoodItem = {
+      name: cfName, calories: Number(cfCalories), carbs: Number(cfCarbs) || 0,
+      protein: Number(cfProtein) || 0, fat: Number(cfFat) || 0,
+      sodium: Number(cfSodium) || 0, potassium: Number(cfPotassium) || 0,
+      phosphorus: 0, sugar: Number(cfSugar) || 0, fiber: 0,
+    };
+    addCustomFood(newFood);
+    handleAddFood(newFood);
+    setShowCustomFood(false);
+    setCfName(''); setCfCalories(''); setCfCarbs(''); setCfProtein('');
+    setCfFat(''); setCfSodium(''); setCfPotassium(''); setCfSugar('');
   };
 
   const calorieTarget = profile?.dailyCalories || 2000;
@@ -102,13 +130,18 @@ const NutritionPage = () => {
       <div className="space-y-2 mb-4">
         {todayLog.filter(f => f.meal === selectedMeal).map(entry => (
           <div key={entry.id} className="medical-card flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <p className="font-medium">{entry.foodName}</p>
               <p className="text-xs text-muted-foreground">
                 {entry.calories} سعرة • {entry.protein}g بروتين • {entry.carbs}g كربوهيدرات
               </p>
             </div>
-            <span className="text-lg font-bold text-primary">{entry.calories}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-primary">{entry.calories}</span>
+              <button onClick={() => removeFoodLogEntry(entry.id)} className="p-1 hover:bg-destructive/10 rounded-lg transition-colors">
+                <Trash2 size={14} className="text-destructive" />
+              </button>
+            </div>
           </div>
         ))}
         {todayLog.filter(f => f.meal === selectedMeal).length === 0 && (
@@ -125,41 +158,66 @@ const NutritionPage = () => {
           <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto animate-slide-up">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">إضافة طعام</h2>
-              <button onClick={() => { setShowSearch(false); setSearch(''); }} className="touch-target p-2"><X size={20} /></button>
+              <button onClick={() => { setShowSearch(false); setSearch(''); setShowCustomFood(false); }} className="touch-target p-2"><X size={20} /></button>
             </div>
-            <div className="relative mb-4">
-              <Search size={18} className="absolute right-3 top-3.5 text-muted-foreground" />
-              <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
-                className="w-full bg-secondary rounded-xl px-4 py-3 pr-10 outline-none focus:ring-2 focus:ring-primary"
-                placeholder="ابحث عن طعام..." />
-            </div>
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-              {filteredFoods.map((food, i) => {
-                const rating = conditions.length > 0 ? rateFoodForConditions(food, conditions) : null;
-                return (
-                  <button key={i} onClick={() => handleAddFood(food)}
-                    className="w-full text-right medical-card flex items-center justify-between hover:border-primary/30 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{food.name}</p>
-                        {rating && (
-                          <span className="text-sm">
-                            {rating.rating === 'safe' ? '🟢' : rating.rating === 'caution' ? '🟡' : '🔴'}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {food.calories} سعرة • {food.protein}g بروتين • {food.carbs}g كربوهيدرات • {food.fat}g دهون
-                      </p>
-                      {rating && rating.reasons.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">{rating.reasons.join(' • ')}</p>
-                      )}
-                    </div>
-                    <Plus size={18} className="text-primary mr-2 flex-shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
+
+            {!showCustomFood ? (
+              <>
+                <div className="relative mb-3">
+                  <Search size={18} className="absolute right-3 top-3.5 text-muted-foreground" />
+                  <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
+                    className="w-full bg-secondary rounded-xl px-4 py-3 pr-10 outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="ابحث عن طعام..." />
+                </div>
+                <button onClick={() => setShowCustomFood(true)} className="mb-3 text-primary text-sm font-semibold">+ إضافة طعام مخصص يدوياً</button>
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                  {filteredFoods.map((food, i) => {
+                    const rating = conditions.length > 0 ? rateFoodForConditions(food, conditions) : null;
+                    return (
+                      <button key={i} onClick={() => handleAddFood(food)}
+                        className="w-full text-right medical-card flex items-center justify-between hover:border-primary/30 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{food.name}</p>
+                            {rating && (
+                              <span className="text-sm">
+                                {rating.rating === 'safe' ? '🟢' : rating.rating === 'caution' ? '🟡' : '🔴'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {food.calories} سعرة • {food.protein}g بروتين • {food.carbs}g كربوهيدرات • {food.fat}g دهون
+                          </p>
+                          {rating && rating.reasons.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">{rating.reasons.join(' • ')}</p>
+                          )}
+                        </div>
+                        <Plus size={18} className="text-primary mr-2 flex-shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <h3 className="font-bold">إضافة طعام مخصص</h3>
+                <input value={cfName} onChange={e => setCfName(e.target.value)} placeholder="اسم الطعام *" className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                <input type="number" value={cfCalories} onChange={e => setCfCalories(e.target.value)} placeholder="السعرات الحرارية *" className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" value={cfCarbs} onChange={e => setCfCarbs(e.target.value)} placeholder="كربوهيدرات (g)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={cfProtein} onChange={e => setCfProtein(e.target.value)} placeholder="بروتين (g)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={cfFat} onChange={e => setCfFat(e.target.value)} placeholder="دهون (g)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={cfSugar} onChange={e => setCfSugar(e.target.value)} placeholder="سكر (g)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={cfSodium} onChange={e => setCfSodium(e.target.value)} placeholder="صوديوم (mg)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={cfPotassium} onChange={e => setCfPotassium(e.target.value)} placeholder="بوتاسيوم (mg)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleAddCustomFood} disabled={!cfName || !cfCalories}
+                    className="flex-1 gradient-primary text-primary-foreground font-bold py-3 rounded-xl disabled:opacity-40">حفظ وإضافة</button>
+                  <button onClick={() => setShowCustomFood(false)} className="flex-1 bg-secondary font-bold py-3 rounded-xl">رجوع</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
