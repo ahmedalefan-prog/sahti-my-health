@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useStore, generateId, getTodayStr, type FoodLogEntry } from '@/lib/store';
 import { FOOD_DATABASE, rateFoodForConditions, type FoodItem } from '@/lib/constants';
-import { Search, Plus, X, Trash2 } from 'lucide-react';
+import { Search, Plus, X, Trash2, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const MEALS = [
   { value: 'breakfast' as const, label: 'فطور' },
@@ -12,6 +13,7 @@ const MEALS = [
 
 const NutritionPage = () => {
   const { profile, foodLog, addFoodLogEntry, removeFoodLogEntry, customFoods, addCustomFood } = useStore();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [showSearch, setShowSearch] = useState(false);
@@ -77,9 +79,14 @@ const NutritionPage = () => {
     <div className="px-4 pt-6 pb-4 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">🍽️ تغذيتي</h1>
-        <button onClick={() => setShowSearch(true)} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
-          <Plus className="text-primary-foreground" size={20} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => navigate('/meal-plan')} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center touch-target" title="جدول أسبوعي">
+            <Calendar size={20} className="text-primary" />
+          </button>
+          <button onClick={() => setShowSearch(true)} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+            <Plus className="text-primary-foreground" size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Daily Summary */}
@@ -155,22 +162,22 @@ const NutritionPage = () => {
       {/* Food Search Modal */}
       {showSearch && (
         <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end">
-          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 max-h-[80vh] flex flex-col animate-slide-up">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h2 className="text-xl font-bold">إضافة طعام</h2>
               <button onClick={() => { setShowSearch(false); setSearch(''); setShowCustomFood(false); }} className="touch-target p-2"><X size={20} /></button>
             </div>
 
             {!showCustomFood ? (
               <>
-                <div className="relative mb-3">
+                <div className="relative mb-3 flex-shrink-0">
                   <Search size={18} className="absolute right-3 top-3.5 text-muted-foreground" />
                   <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
                     className="w-full bg-secondary rounded-xl px-4 py-3 pr-10 outline-none focus:ring-2 focus:ring-primary"
                     placeholder="ابحث عن طعام..." />
                 </div>
-                <button onClick={() => setShowCustomFood(true)} className="mb-3 text-primary text-sm font-semibold">+ إضافة طعام مخصص يدوياً</button>
-                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                <button onClick={() => setShowCustomFood(true)} className="mb-3 text-primary text-sm font-semibold flex-shrink-0">+ إضافة طعام مخصص يدوياً</button>
+                <div className="flex-1 overflow-y-auto space-y-2">
                   {filteredFoods.map((food, i) => {
                     const rating = conditions.length > 0 ? rateFoodForConditions(food, conditions) : null;
                     return (
@@ -199,7 +206,7 @@ const NutritionPage = () => {
                 </div>
               </>
             ) : (
-              <div className="space-y-3">
+              <div className="flex-1 overflow-y-auto space-y-3">
                 <h3 className="font-bold">إضافة طعام مخصص</h3>
                 <input value={cfName} onChange={e => setCfName(e.target.value)} placeholder="اسم الطعام *" className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
                 <input type="number" value={cfCalories} onChange={e => setCfCalories(e.target.value)} placeholder="السعرات الحرارية *" className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
@@ -211,7 +218,7 @@ const NutritionPage = () => {
                   <input type="number" value={cfSodium} onChange={e => setCfSodium(e.target.value)} placeholder="صوديوم (mg)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
                   <input type="number" value={cfPotassium} onChange={e => setCfPotassium(e.target.value)} placeholder="بوتاسيوم (mg)" className="bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary" />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 sticky bottom-0 bg-card pt-2">
                   <button onClick={handleAddCustomFood} disabled={!cfName || !cfCalories}
                     className="flex-1 gradient-primary text-primary-foreground font-bold py-3 rounded-xl disabled:opacity-40">حفظ وإضافة</button>
                   <button onClick={() => setShowCustomFood(false)} className="flex-1 bg-secondary font-bold py-3 rounded-xl">رجوع</button>

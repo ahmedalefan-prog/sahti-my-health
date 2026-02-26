@@ -75,6 +75,28 @@ export interface JournalEntry {
   notes: string;
 }
 
+export interface MealPlanDay {
+  day: string; // 'saturday' | 'sunday' | ...
+  breakfast: string[];
+  lunch: string[];
+  dinner: string[];
+  snack: string[];
+}
+
+export interface AppSettings {
+  darkMode: boolean;
+  notificationsEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  darkMode: false,
+  notificationsEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+};
+
 interface StoreState {
   profile: Profile | null;
   medications: Medication[];
@@ -85,6 +107,8 @@ interface StoreState {
   journalEntries: JournalEntry[];
   customLabTests: import('@/lib/constants').LabTestDef[];
   customFoods: import('@/lib/constants').FoodItem[];
+  mealPlan: MealPlanDay[];
+  settings: AppSettings;
   setProfile: (p: Profile) => void;
   addMedication: (m: Medication) => void;
   removeMedication: (id: string) => void;
@@ -99,6 +123,9 @@ interface StoreState {
   updateJournalEntry: (e: JournalEntry) => void;
   addCustomLabTest: (t: import('@/lib/constants').LabTestDef) => void;
   addCustomFood: (f: import('@/lib/constants').FoodItem) => void;
+  setMealPlan: (plan: MealPlanDay[]) => void;
+  updateSettings: (s: Partial<AppSettings>) => void;
+  resetAllData: () => void;
 }
 
 const StoreContext = createContext<StoreState | null>(null);
@@ -124,6 +151,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(loadLS('journalEntries', []));
   const [customLabTests, setCustomLabTests] = useState<import('@/lib/constants').LabTestDef[]>(loadLS('customLabTests', []));
   const [customFoods, setCustomFoods] = useState<import('@/lib/constants').FoodItem[]>(loadLS('customFoods', []));
+  const [mealPlan, setMealPlanState] = useState<MealPlanDay[]>(loadLS('mealPlan', []));
+  const [settings, setSettings] = useState<AppSettings>(loadLS('settings', DEFAULT_SETTINGS));
 
   useEffect(() => { saveLS('profile', profile); }, [profile]);
   useEffect(() => { saveLS('medications', medications); }, [medications]);
@@ -134,6 +163,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { saveLS('journalEntries', journalEntries); }, [journalEntries]);
   useEffect(() => { saveLS('customLabTests', customLabTests); }, [customLabTests]);
   useEffect(() => { saveLS('customFoods', customFoods); }, [customFoods]);
+  useEffect(() => { saveLS('mealPlan', mealPlan); }, [mealPlan]);
+  useEffect(() => { saveLS('settings', settings); }, [settings]);
+
+  // Apply dark mode
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', settings.darkMode);
+  }, [settings.darkMode]);
 
   const setProfile = useCallback((p: Profile) => _setProfile(p), []);
   const addMedication = useCallback((m: Medication) => setMedications(prev => [...prev, m]), []);
@@ -149,15 +185,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateJournalEntry = useCallback((e: JournalEntry) => setJournalEntries(prev => prev.map(j => j.id === e.id ? e : j)), []);
   const addCustomLabTest = useCallback((t: import('@/lib/constants').LabTestDef) => setCustomLabTests(prev => [...prev, t]), []);
   const addCustomFood = useCallback((f: import('@/lib/constants').FoodItem) => setCustomFoods(prev => [...prev, f]), []);
+  const setMealPlan = useCallback((plan: MealPlanDay[]) => setMealPlanState(plan), []);
+  const updateSettings = useCallback((s: Partial<AppSettings>) => setSettings(prev => ({ ...prev, ...s })), []);
+  const resetAllData = useCallback(() => {
+    const keys = ['profile', 'medications', 'medicationLogs', 'sideEffects', 'labResults', 'foodLog', 'journalEntries', 'customLabTests', 'customFoods', 'mealPlan', 'settings'];
+    keys.forEach(k => localStorage.removeItem(`sahti_${k}`));
+    window.location.reload();
+  }, []);
 
   return (
     <StoreContext.Provider value={{
       profile, medications, medicationLogs, sideEffects, labResults, foodLog, journalEntries,
-      customLabTests, customFoods,
+      customLabTests, customFoods, mealPlan, settings,
       setProfile, addMedication, removeMedication, addMedicationLog, addSideEffect,
       addLabResult, updateLabResult, removeLabResult,
       addFoodLogEntry, removeFoodLogEntry, addJournalEntry, updateJournalEntry,
-      addCustomLabTest, addCustomFood,
+      addCustomLabTest, addCustomFood, setMealPlan, updateSettings, resetAllData,
     }}>
       {children}
     </StoreContext.Provider>
@@ -178,7 +221,6 @@ export const calculateBMI = (weight: number, height: number) => {
 };
 
 export const calculateCalories = (gender: 'male' | 'female', weight: number, height: number, age: number) => {
-  // Mifflin-St Jeor
   if (gender === 'male') {
     return Math.round(10 * weight + 6.25 * height - 5 * age + 5);
   }
