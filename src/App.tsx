@@ -13,6 +13,9 @@ import NutritionPage from "@/pages/NutritionPage";
 import ProfilePage from "@/pages/ProfilePage";
 import ProgressPage from "@/pages/ProgressPage";
 import JournalPage from "@/pages/JournalPage";
+import SettingsPage from "@/pages/SettingsPage";
+import ReportPage from "@/pages/ReportPage";
+import MealPlanPage from "@/pages/MealPlanPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +40,9 @@ const AppRoutes = () => {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/journal" element={<JournalPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/report" element={<ReportPage />} />
+        <Route path="/meal-plan" element={<MealPlanPage />} />
       </Route>
       <Route path="*" element={profile ? <NotFound /> : <Navigate to="/onboarding" replace />} />
     </Routes>

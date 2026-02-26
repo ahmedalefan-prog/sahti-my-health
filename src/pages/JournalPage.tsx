@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore, generateId, getTodayStr, type JournalEntry } from '@/lib/store';
 import { MOODS } from '@/lib/constants';
-import { Search } from 'lucide-react';
+import { Search, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 const JournalPage = () => {
   const { journalEntries, addJournalEntry, updateJournalEntry } = useStore();
@@ -11,13 +12,26 @@ const JournalPage = () => {
   const todayEntry = journalEntries.find(e => e.date === today);
   const [notes, setNotes] = useState(todayEntry?.notes || '');
   const [mood, setMood] = useState(todayEntry?.mood || 0);
+  const [saved, setSaved] = useState(false);
+
+  // Sync state when todayEntry changes (after save)
+  useEffect(() => {
+    if (todayEntry) {
+      setNotes(todayEntry.notes);
+      setMood(todayEntry.mood);
+    }
+  }, [todayEntry?.id]);
 
   const handleSave = () => {
+    if (!mood && !notes.trim()) return;
     if (todayEntry) {
-      updateJournalEntry({ ...todayEntry, notes, mood });
+      updateJournalEntry({ ...todayEntry, notes: notes.trim(), mood });
     } else {
-      addJournalEntry({ id: generateId(), date: today, notes, mood });
+      addJournalEntry({ id: generateId(), date: today, notes: notes.trim(), mood });
     }
+    setSaved(true);
+    toast.success('تم حفظ يومياتك بنجاح ✅');
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const filteredEntries = useMemo(() => {
@@ -47,9 +61,11 @@ const JournalPage = () => {
         <textarea value={notes} onChange={e => setNotes(e.target.value)}
           className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary resize-none h-28"
           placeholder="اكتب ملاحظاتك عن يومك..." />
-        <button onClick={handleSave} disabled={!mood && !notes}
-          className="w-full gradient-primary text-primary-foreground font-bold py-3 rounded-xl mt-3 touch-target disabled:opacity-40">
-          حفظ
+        <button onClick={handleSave} disabled={!mood && !notes.trim()}
+          className={`w-full font-bold py-3 rounded-xl mt-3 touch-target disabled:opacity-40 flex items-center justify-center gap-2 transition-all ${
+            saved ? 'bg-success text-white' : 'gradient-primary text-primary-foreground'
+          }`}>
+          {saved ? <><Check size={20} /> تم الحفظ</> : 'حفظ'}
         </button>
       </div>
 
