@@ -1,14 +1,49 @@
 import { useStore } from '@/lib/store';
 import { LAB_TESTS } from '@/lib/constants';
+import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+
+interface TestDef {
+  key: string;
+  name: string;
+  unit: string;
+  normalMin: number;
+  normalMax: number;
+}
 
 const ProgressPage = () => {
   const { labResults, medications, medicationLogs } = useStore();
-  const [selectedTest, setSelectedTest] = useState(LAB_TESTS[0].key);
 
-  const testsWithData = LAB_TESTS.filter(t => labResults.some(r => r.testKey === t.key));
-  const currentTest = LAB_TESTS.find(t => t.key === selectedTest);
+  // Build all known test definitions from LAB_TESTS + PDF_LAB_MAPPINGS + results
+  const allTestDefs = useMemo(() => {
+    const defs: TestDef[] = LAB_TESTS.map(t => ({ key: t.key, name: t.name, unit: t.unit, normalMin: t.normalMin, normalMax: t.normalMax }));
+    const knownKeys = new Set(defs.map(d => d.key));
+
+    for (const m of PDF_LAB_MAPPINGS) {
+      if (!knownKeys.has(m.key)) {
+        defs.push({ key: m.key, name: m.arabicName, unit: m.unit, normalMin: m.normalMin, normalMax: m.normalMax });
+        knownKeys.add(m.key);
+      }
+    }
+
+    // Any remaining unknown keys from results
+    for (const r of labResults) {
+      if (!knownKeys.has(r.testKey)) {
+        defs.push({ key: r.testKey, name: r.testName, unit: r.unit, normalMin: 0, normalMax: 999 });
+        knownKeys.add(r.testKey);
+      }
+    }
+    return defs;
+  }, [labResults]);
+
+  const testsWithData = useMemo(() =>
+    allTestDefs.filter(t => labResults.some(r => r.testKey === t.key)),
+    [allTestDefs, labResults]
+  );
+
+  const [selectedTest, setSelectedTest] = useState(testsWithData[0]?.key || LAB_TESTS[0].key);
+  const currentTest = allTestDefs.find(t => t.key === selectedTest);
 
   const chartData = labResults
     .filter(r => r.testKey === selectedTest)
@@ -16,7 +51,7 @@ const ProgressPage = () => {
     .map(r => ({ date: r.date.slice(5), value: r.value, fullDate: r.date }));
 
   // Health score: % of latest results in normal range
-  const latestPerTest = LAB_TESTS.map(test => {
+  const latestPerTest = allTestDefs.map(test => {
     const results = labResults.filter(r => r.testKey === test.key).sort((a, b) => b.date.localeCompare(a.date));
     return results[0];
   }).filter(Boolean);
@@ -24,7 +59,6 @@ const ProgressPage = () => {
   const healthScore = latestPerTest.length > 0 ? Math.round((normalCount / latestPerTest.length) * 100) : 0;
 
   // Med adherence
-  const totalDoses = medications.reduce((sum, m) => sum + m.times.length, 0);
   const totalLogs = medicationLogs.length;
   const takenLogs = medicationLogs.filter(l => l.status === 'taken').length;
 

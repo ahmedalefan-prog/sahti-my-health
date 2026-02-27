@@ -236,7 +236,7 @@ export function convertToLabResults(extraction: PdfExtraction): LabResult[] {
     .filter(r => r.selected)
     .map(r => ({
       id: generateId(),
-      testKey: `pdf_${r.key}`,
+      testKey: r.key,
       testName: r.arabicName,
       value: r.value,
       unit: r.unit,

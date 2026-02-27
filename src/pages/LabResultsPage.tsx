@@ -1,20 +1,57 @@
 import { useState, useMemo } from 'react';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { LAB_TESTS, getLabStatus, type LabTestDef } from '@/lib/constants';
-import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2, FileUp } from 'lucide-react';
+import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
+import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2, FileUp, Calendar } from 'lucide-react';
 import PdfImportModal from '@/components/PdfImportModal';
+
+type ViewMode = 'byTest' | 'byDate';
 
 const LabResultsPage = () => {
   const { labResults, addLabResult, updateLabResult, removeLabResult, profile, customLabTests, addCustomLabTest } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [showCustomTestForm, setShowCustomTestForm] = useState(false);
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [editingResult, setEditingResult] = useState<LabResult | null>(null);
   const [showPdfImport, setShowPdfImport] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('byDate');
 
-  // Form state
-  const allTests = useMemo(() => [...LAB_TESTS, ...customLabTests], [customLabTests]);
-  const [selectedTest, setSelectedTest] = useState(allTests[0]?.key || '');
+  // Build complete test definitions: LAB_TESTS + customLabTests + PDF mappings for any result keys
+  const allTests = useMemo(() => {
+    const base: LabTestDef[] = [...LAB_TESTS, ...customLabTests];
+    const knownKeys = new Set(base.map(t => t.key));
+
+    // Add PDF mapping definitions for any results that use PDF keys
+    for (const r of labResults) {
+      if (knownKeys.has(r.testKey)) continue;
+      const pdfMapping = PDF_LAB_MAPPINGS.find(m => m.key === r.testKey);
+      if (pdfMapping) {
+        base.push({
+          key: pdfMapping.key,
+          name: pdfMapping.arabicName,
+          unit: pdfMapping.unit,
+          normalMin: pdfMapping.normalMin,
+          normalMax: pdfMapping.normalMax,
+          genderSpecific: pdfMapping.genderSpecific,
+        });
+        knownKeys.add(pdfMapping.key);
+      } else {
+        // Fallback: create a test def from the result itself
+        base.push({
+          key: r.testKey,
+          name: r.testName,
+          unit: r.unit,
+          normalMin: 0,
+          normalMax: 999,
+        });
+        knownKeys.add(r.testKey);
+      }
+    }
+    return base;
+  }, [customLabTests, labResults]);
+
+  const [selectedTest, setSelectedTest] = useState(LAB_TESTS[0]?.key || '');
   const [value, setValue] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
@@ -71,10 +108,29 @@ const LabResultsPage = () => {
     setCtName(''); setCtUnit(''); setCtMin(''); setCtMax('');
   };
 
-  const groupedResults = allTests.map(test => {
-    const results = labResults.filter(r => r.testKey === test.key).sort((a, b) => b.date.localeCompare(a.date));
-    return { test, results };
-  }).filter(g => g.results.length > 0);
+  // Group by test (for byTest view)
+  const groupedByTest = useMemo(() => {
+    return allTests.map(test => {
+      const results = labResults.filter(r => r.testKey === test.key).sort((a, b) => b.date.localeCompare(a.date));
+      return { test, results };
+    }).filter(g => g.results.length > 0);
+  }, [allTests, labResults]);
+
+  // Group by date (for byDate view)
+  const groupedByDate = useMemo(() => {
+    const dateMap = new Map<string, LabResult[]>();
+    for (const r of labResults) {
+      const existing = dateMap.get(r.date) || [];
+      existing.push(r);
+      dateMap.set(r.date, existing);
+    }
+    return Array.from(dateMap.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, results]) => {
+        const isPdf = results.some(r => r.notes?.includes('PDF'));
+        return { date, results, source: isPdf ? 'PDF' : 'يدوي' };
+      });
+  }, [labResults]);
 
   const getTrend = (results: LabResult[], test: LabTestDef) => {
     if (results.length < 2) return null;
@@ -88,9 +144,23 @@ const LabResultsPage = () => {
     return 'stable';
   };
 
+  const getStatusBadge = (status: string) => {
+    if (status === 'normal') return { text: '🟢 طبيعي', cls: 'status-normal' };
+    if (status === 'warning') return { text: '🟡 مراقبة', cls: 'status-warning' };
+    return { text: '🔴 خارج النطاق', cls: 'status-danger' };
+  };
+
+  const getTestDef = (testKey: string): LabTestDef | undefined => allTests.find(t => t.key === testKey);
+
+  const formatDate = (d: string) => {
+    const parts = d.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return d;
+  };
+
   return (
     <div className="px-4 pt-6 pb-4 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">🧪 تحاليلي</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowPdfImport(true)} className="h-10 px-3 rounded-xl bg-secondary flex items-center gap-1.5 touch-target text-sm font-semibold">
@@ -102,6 +172,20 @@ const LabResultsPage = () => {
           </button>
         </div>
       </div>
+
+      {/* View Mode Toggle */}
+      {labResults.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setViewMode('byDate')}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${viewMode === 'byDate' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
+            <Calendar size={14} /> حسب التاريخ
+          </button>
+          <button onClick={() => setViewMode('byTest')}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'byTest' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
+            🧪 حسب التحليل
+          </button>
+        </div>
+      )}
 
       <PdfImportModal open={showPdfImport} onClose={() => setShowPdfImport(false)} />
 
@@ -166,35 +250,114 @@ const LabResultsPage = () => {
         </div>
       )}
 
-      {/* Results List */}
-      {groupedResults.length === 0 ? (
+      {/* Empty State */}
+      {labResults.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-6xl mb-4">🧪</p>
           <p className="text-muted-foreground text-lg">لم تضف أي تحاليل بعد</p>
           <button onClick={() => setShowForm(true)} className="mt-4 text-primary font-semibold">أضف أول تحليل</button>
         </div>
+      ) : viewMode === 'byDate' ? (
+        /* ═══ BY DATE VIEW ═══ */
+        <div className="space-y-4">
+          {groupedByDate.map(({ date, results, source }) => {
+            const isExpanded = expandedDate === date;
+            return (
+              <div key={date} className="medical-card-elevated">
+                <button onClick={() => setExpandedDate(isExpanded ? null : date)} className="w-full text-right">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">{formatDate(date)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${source === 'PDF' ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+                        {source}
+                      </span>
+                      <span className="text-xs text-muted-foreground">({results.length} تحليل)</span>
+                    </div>
+                    {isExpanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+                  </div>
+                </button>
+
+                {/* Always show summary */}
+                <div className={`mt-3 space-y-2 ${!isExpanded ? '' : 'mb-2'}`}>
+                  {results.map(r => {
+                    const badge = getStatusBadge(r.status);
+                    const testDef = getTestDef(r.testKey);
+                    return (
+                      <div key={r.id} className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${badge.cls}`}>
+                            {r.status === 'normal' ? '🟢' : r.status === 'warning' ? '🟡' : '🔴'}
+                          </span>
+                          <span className="text-sm font-semibold truncate">{r.testName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${r.status === 'normal' ? 'text-success' : r.status === 'warning' ? 'text-warning' : 'text-destructive'}`}>
+                            {r.value}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{r.unit}</span>
+                          {isExpanded && (
+                            <div className="flex items-center gap-0.5">
+                              <button onClick={() => openEdit(r)} className="p-1.5 hover:bg-primary/10 rounded-lg transition-colors">
+                                <Pencil size={12} className="text-primary" />
+                              </button>
+                              <button onClick={() => removeLabResult(r.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors">
+                                <Trash2 size={12} className="text-destructive" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Expanded: show normal ranges */}
+                {isExpanded && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground mb-2">النطاقات الطبيعية:</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {results.map(r => {
+                        const testDef = getTestDef(r.testKey);
+                        if (!testDef) return null;
+                        return (
+                          <div key={r.id} className="text-xs text-muted-foreground">
+                            {r.testName}: {testDef.normalMin}-{testDef.normalMax}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* ═══ BY TEST VIEW ═══ */
         <div className="space-y-3">
-          {groupedResults.map(({ test, results }) => {
+          {groupedByTest.map(({ test, results }) => {
             const latest = results[0];
             const trend = getTrend(results, test);
             const change = results.length >= 2 ? ((results[0].value - results[1].value) / results[1].value * 100).toFixed(1) : null;
             const isExpanded = expandedTest === test.key;
+            const isPdf = latest.notes?.includes('PDF');
 
             return (
               <div key={test.key} className="medical-card-elevated">
                 <button onClick={() => setExpandedTest(isExpanded ? null : test.key)} className="w-full text-right">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-bold">{test.name}</h3>
-                      <p className="text-xs text-muted-foreground">النطاق الطبيعي: {test.normalMin}-{test.normalMax} {test.unit}</p>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold">{test.name}</h3>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${isPdf ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+                          {isPdf ? 'PDF' : 'يدوي'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">النطاق: {test.normalMin}-{test.normalMax} {test.unit}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                        latest.status === 'normal' ? 'status-normal' :
-                        latest.status === 'warning' ? 'status-warning' : 'status-danger'
-                      }`}>
-                        {latest.status === 'normal' ? '🟢 طبيعي' : latest.status === 'warning' ? '🟡 مراقبة' : '🔴 خارج النطاق'}
+                      <span className={`text-xs px-2 py-1 rounded-full font-semibold ${getStatusBadge(latest.status).cls}`}>
+                        {getStatusBadge(latest.status).text}
                       </span>
                       {isExpanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
                     </div>
@@ -202,7 +365,7 @@ const LabResultsPage = () => {
                   <div className="flex items-end justify-between">
                     <div>
                       <p className="text-3xl font-bold">{latest.value}</p>
-                      <p className="text-xs text-muted-foreground">{test.unit} • {latest.date}</p>
+                      <p className="text-xs text-muted-foreground">{test.unit} • {formatDate(latest.date)}</p>
                     </div>
                     {trend && (
                       <div className={`flex items-center gap-1 text-sm font-semibold ${
@@ -218,7 +381,7 @@ const LabResultsPage = () => {
                 {/* Expanded History */}
                 {isExpanded && (
                   <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
-                    <h4 className="text-sm font-bold text-muted-foreground mb-2">السجل السابق ({results.length} نتائج)</h4>
+                    <h4 className="text-sm font-bold text-muted-foreground mb-2">السجل كامل ({results.length} نتائج)</h4>
                     {results.map(r => (
                       <div key={r.id} className="flex items-center justify-between bg-secondary/50 rounded-xl p-3">
                         <div className="flex-1">
@@ -226,9 +389,12 @@ const LabResultsPage = () => {
                             <span className={`font-bold ${
                               r.status === 'normal' ? 'text-success' : r.status === 'warning' ? 'text-warning' : 'text-destructive'
                             }`}>{r.value} {test.unit}</span>
-                            <span className="text-xs text-muted-foreground">{r.date}</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(r.date)}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.notes?.includes('PDF') ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+                              {r.notes?.includes('PDF') ? 'PDF' : 'يدوي'}
+                            </span>
                           </div>
-                          {r.notes && <p className="text-xs text-muted-foreground mt-1">{r.notes}</p>}
+                          {r.notes && !r.notes.includes('PDF') && <p className="text-xs text-muted-foreground mt-1">{r.notes}</p>}
                         </div>
                         <div className="flex items-center gap-1">
                           <button onClick={(e) => { e.stopPropagation(); openEdit(r); }} className="p-2 hover:bg-primary/10 rounded-lg transition-colors">
