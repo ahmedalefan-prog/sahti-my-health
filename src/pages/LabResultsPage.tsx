@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { LAB_TESTS, getLabStatus, type LabTestDef } from '@/lib/constants';
-import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
+import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2, FileUp } from 'lucide-react';
+import PdfImportModal from '@/components/PdfImportModal';
 
 const LabResultsPage = () => {
   const { labResults, addLabResult, updateLabResult, removeLabResult, profile, customLabTests, addCustomLabTest } = useStore();
@@ -9,6 +10,7 @@ const LabResultsPage = () => {
   const [showCustomTestForm, setShowCustomTestForm] = useState(false);
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
   const [editingResult, setEditingResult] = useState<LabResult | null>(null);
+  const [showPdfImport, setShowPdfImport] = useState(false);
 
   // Form state
   const allTests = useMemo(() => [...LAB_TESTS, ...customLabTests], [customLabTests]);
@@ -90,10 +92,18 @@ const LabResultsPage = () => {
     <div className="px-4 pt-6 pb-4 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">🧪 تحاليلي</h1>
-        <button onClick={() => { setEditingResult(null); setShowForm(true); }} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
-          <Plus className="text-primary-foreground" size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowPdfImport(true)} className="h-10 px-3 rounded-xl bg-secondary flex items-center gap-1.5 touch-target text-sm font-semibold">
+            <FileUp size={16} className="text-primary" />
+            <span>استيراد PDF</span>
+          </button>
+          <button onClick={() => { setEditingResult(null); setShowForm(true); }} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+            <Plus className="text-primary-foreground" size={20} />
+          </button>
+        </div>
       </div>
+
+      <PdfImportModal open={showPdfImport} onClose={() => setShowPdfImport(false)} />
 
       {/* Form Modal */}
       {showForm && (
