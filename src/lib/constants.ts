@@ -16,9 +16,21 @@ export const MED_FORMS = [
 ];
 
 export const MED_FREQUENCIES = [
-  { value: 'daily', label: 'يومي' },
+  { value: 'daily', label: 'كل يوم (يومي)' },
+  { value: 'interval', label: 'كل عدة أيام/ساعات' },
+  { value: 'specific_days', label: 'أيام محددة من الأسبوع' },
   { value: 'weekly', label: 'أسبوعي' },
-  { value: 'custom', label: 'أيام محددة' },
+  { value: 'monthly', label: 'شهري' },
+];
+
+export const WEEK_DAYS = [
+  { value: 'saturday', label: 'السبت' },
+  { value: 'sunday', label: 'الأحد' },
+  { value: 'monday', label: 'الاثنين' },
+  { value: 'tuesday', label: 'الثلاثاء' },
+  { value: 'wednesday', label: 'الأربعاء' },
+  { value: 'thursday', label: 'الخميس' },
+  { value: 'friday', label: 'الجمعة' },
 ];
 
 export interface LabTestDef {
