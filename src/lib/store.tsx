@@ -25,6 +25,13 @@ export interface Medication {
   startDate: string;
   endDate: string;
   notes: string;
+  // Advanced scheduling
+  intervalHours?: number; // for 'interval' frequency
+  intervalUnit?: 'hours' | 'days'; // hours or days
+  firstDoseDateTime?: string; // ISO datetime for interval start
+  specificDays?: string[]; // for 'specific_days' frequency: ['saturday','monday',...]
+  weeklyDay?: string; // for 'weekly': 'saturday'
+  monthlyDay?: number; // for 'monthly': 1-31
 }
 
 export interface MedicationLog {
@@ -33,6 +40,7 @@ export interface MedicationLog {
   date: string;
   time: string;
   status: 'taken' | 'missed' | 'snoozed';
+  timestamp?: string; // ISO datetime of when dose was actually taken
 }
 
 export interface SideEffect {
