@@ -3,14 +3,15 @@ import { useStore, generateId, type LabResult } from '@/lib/store';
 import { LAB_TESTS, getLabStatus, type LabTestDef } from '@/lib/constants';
 import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
 import { useLanguage } from '@/lib/i18n';
-import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2, FileUp, Calendar } from 'lucide-react';
+import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2, FileUp, Calendar, Brain } from 'lucide-react';
 import PdfImportModal from '@/components/PdfImportModal';
+import { toast } from 'sonner';
 
 type ViewMode = 'byTest' | 'byDate';
 
 const LabResultsPage = () => {
   const { labResults, addLabResult, updateLabResult, removeLabResult, profile, customLabTests, addCustomLabTest } = useStore();
-  const { t, tLabName } = useLanguage();
+  const { t, tLabName, lang } = useLanguage();
   const [showForm, setShowForm] = useState(false);
   const [showCustomTestForm, setShowCustomTestForm] = useState(false);
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
@@ -101,6 +102,18 @@ const LabResultsPage = () => {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">{t('lab.title')}</h1>
         <div className="flex items-center gap-2">
+          <button onClick={() => {
+            const key = localStorage.getItem('sahti_gemini_key');
+            if (!key) {
+              toast.error(t('lab.aiImport') + ' - ' + (lang === 'ar' ? 'أضف مفتاح Gemini في الإعدادات' : 'Add Gemini key in Settings'));
+              return;
+            }
+            // Trigger AI assistant PDF import
+            const btn = document.querySelector('[data-ai-open]') as HTMLButtonElement;
+            if (btn) btn.click();
+          }} className="h-10 px-3 rounded-xl bg-primary/10 flex items-center gap-1.5 touch-target text-sm font-semibold text-primary">
+            <Brain size={16} /><span>{t('lab.aiImport')}</span>
+          </button>
           <button onClick={() => setShowPdfImport(true)} className="h-10 px-3 rounded-xl bg-secondary flex items-center gap-1.5 touch-target text-sm font-semibold">
             <FileUp size={16} className="text-primary" /><span>{t('lab.importPdf')}</span>
           </button>
