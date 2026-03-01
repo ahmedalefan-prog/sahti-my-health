@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Pill, FlaskConical, User } from 'lucide-react';
+import { Home, Pill, FlaskConical, User, UtensilsCrossed } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 
 const Layout = () => {
@@ -9,9 +9,10 @@ const Layout = () => {
 
   const tabs = [
     { path: '/', icon: Home, labelKey: 'nav.home' },
-    { path: '/medications', icon: Pill, labelKey: 'nav.medications' },
-    { path: '/assistant', icon: null, labelKey: 'nav.assistant', emoji: '🧠' },
     { path: '/lab-results', icon: FlaskConical, labelKey: 'nav.labs' },
+    { path: '/assistant', icon: null, labelKey: 'nav.assistant', emoji: '🧠' },
+    { path: '/nutrition', icon: UtensilsCrossed, labelKey: 'nav.nutrition' },
+    { path: '/medications', icon: Pill, labelKey: 'nav.medications' },
     { path: '/profile', icon: User, labelKey: 'nav.profile' },
   ];
 
@@ -21,23 +22,23 @@ const Layout = () => {
         <Outlet />
       </div>
       <nav className="fixed bottom-0 inset-x-0 bg-card border-t border-border z-50">
-        <div className="max-w-lg mx-auto flex justify-around items-center h-[70px] px-2">
+        <div className="max-w-lg mx-auto flex justify-around items-center h-[70px] px-1">
           {tabs.map(tab => {
             const isActive = location.pathname === tab.path;
             return (
               <button
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
-                className={`flex flex-col items-center gap-1 touch-target p-2 rounded-xl transition-colors ${
+                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-colors min-w-0 ${
                   isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tab.emoji ? (
-                  <span className="text-[22px] leading-none">{tab.emoji}</span>
+                  <span className="text-[20px] leading-none">{tab.emoji}</span>
                 ) : (
-                  tab.icon && <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                  tab.icon && <tab.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
                 )}
-                <span className={`text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>
+                <span className={`text-[10px] leading-tight ${isActive ? 'font-bold' : 'font-medium'}`}>
                   {t(tab.labelKey)}
                 </span>
               </button>
