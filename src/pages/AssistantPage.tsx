@@ -92,6 +92,8 @@ const AssistantPage = () => {
       bloodType: profile.bloodType,
       bmi: profile.bmi,
       conditions: profile.conditions?.length ? profile.conditions.join('، ') : 'لا يوجد',
+      customConditions: profile.customConditions?.length ? profile.customConditions.join('، ') : '',
+      surgeries: profile.surgeries || '',
       doctorName: profile.doctorName,
       dailyCalories: profile.dailyCalories,
       labSummary,

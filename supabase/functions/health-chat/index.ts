@@ -30,6 +30,8 @@ serve(async (req) => {
 طول${gPoss} ${p.height || '?'} سم، وزن${gPoss} ${p.weight || '?'} كغ،
 فصيلة دم${gPoss} ${p.bloodType || '?'}، BMI: ${p.bmi || '?'}.
 أمراض${gPoss} المزمنة: ${p.conditions || 'لا يوجد'}.
+أمراض إضافية: ${p.customConditions || 'لا يوجد'}.
+عمليات جراحية / زراعة أعضاء: ${p.surgeries || 'لا يوجد'}.
 طبيب${gPoss} المعالج: ${p.doctorName || 'غير محدد'}.
 السعرات اليومية المطلوبة: ${p.dailyCalories || '?'}.
 

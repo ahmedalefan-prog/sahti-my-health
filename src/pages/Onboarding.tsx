@@ -13,7 +13,9 @@ const Onboarding = () => {
   const [form, setForm] = useState({
     name: '', age: '', gender: 'male' as 'male' | 'female',
     weight: '', height: '', bloodType: 'O+',
-    conditions: [] as string[], doctorName: '', emergencyNumber: '',
+    conditions: [] as string[], customConditions: [] as string[],
+    customConditionInput: '', surgeries: '',
+    doctorName: '', emergencyNumber: '',
   });
 
   const toggleCondition = (key: string) => {
@@ -34,7 +36,8 @@ const Onboarding = () => {
     const profile: Profile = {
       name: form.name, age, gender: form.gender,
       weight, height, bloodType: form.bloodType,
-      conditions: form.conditions, doctorName: form.doctorName,
+      conditions: form.conditions, customConditions: form.customConditions,
+      surgeries: form.surgeries, doctorName: form.doctorName,
       emergencyNumber: form.emergencyNumber, bmi, dailyCalories,
     };
     setProfile(profile);
@@ -130,6 +133,31 @@ const Onboarding = () => {
               </button>
             ))}
           </div>
+          <div className="mt-3">
+            <label className="block text-xs text-muted-foreground mb-1">{t('prof.addCustomCondition')}</label>
+            <div className="flex gap-2">
+              <input value={form.customConditionInput} onChange={e => setForm(p => ({ ...p, customConditionInput: e.target.value }))}
+                className="flex-1 bg-secondary rounded-xl px-4 py-2 text-foreground outline-none focus:ring-2 focus:ring-primary text-sm"
+                placeholder={t('prof.customConditionPlaceholder')} />
+              <button onClick={() => { if (form.customConditionInput.trim()) { setForm(p => ({ ...p, customConditions: [...p.customConditions, p.customConditionInput.trim()], customConditionInput: '' })); } }}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">{t('add')}</button>
+            </div>
+            {form.customConditions.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {form.customConditions.map((c, i) => (
+                  <span key={i} className="px-3 py-1 bg-primary text-primary-foreground rounded-xl text-sm font-semibold flex items-center gap-1">
+                    {c} <button onClick={() => setForm(p => ({ ...p, customConditions: p.customConditions.filter((_, j) => j !== i) }))} className="text-primary-foreground/70 hover:text-primary-foreground">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold mb-2">{t('prof.surgeries')}</label>
+          <input value={form.surgeries} onChange={e => setForm(p => ({ ...p, surgeries: e.target.value }))}
+            className="w-full bg-secondary rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary touch-target"
+            placeholder={t('prof.surgeriesPlaceholder')} />
         </div>
         <div>
           <label className="block text-sm font-semibold mb-2">{t('prof.doctorName')}</label>
