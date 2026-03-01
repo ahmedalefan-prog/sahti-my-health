@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { StoreProvider, useStore } from "@/lib/store";
+import { LanguageProvider } from "@/lib/i18n";
 import Layout from "@/components/Layout";
 import Onboarding from "@/pages/Onboarding";
 import HomePage from "@/pages/HomePage";
@@ -54,11 +55,13 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <StoreProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </StoreProvider>
+      <LanguageProvider>
+        <StoreProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </StoreProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
