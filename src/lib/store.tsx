@@ -9,6 +9,8 @@ export interface Profile {
   height: number;
   bloodType: string;
   conditions: string[];
+  customConditions: string[];
+  surgeries: string;
   doctorName: string;
   emergencyNumber: string;
   bmi: number;

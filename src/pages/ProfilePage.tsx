@@ -14,7 +14,9 @@ const ProfilePage = () => {
   const [form, setForm] = useState({
     name: '', age: '', gender: 'male' as 'male' | 'female',
     weight: '', height: '', bloodType: 'O+',
-    conditions: [] as string[], doctorName: '', emergencyNumber: '',
+    conditions: [] as string[], customConditions: [] as string[],
+    customConditionInput: '', surgeries: '',
+    doctorName: '', emergencyNumber: '',
   });
 
   if (!profile) { navigate('/onboarding'); return null; }
@@ -25,7 +27,9 @@ const ProfilePage = () => {
     setForm({
       name: profile.name, age: String(profile.age), gender: profile.gender,
       weight: String(profile.weight), height: String(profile.height), bloodType: profile.bloodType,
-      conditions: [...profile.conditions], doctorName: profile.doctorName, emergencyNumber: profile.emergencyNumber,
+      conditions: [...profile.conditions], customConditions: [...(profile.customConditions || [])],
+      customConditionInput: '', surgeries: profile.surgeries || '',
+      doctorName: profile.doctorName, emergencyNumber: profile.emergencyNumber,
     });
     setEditing(true);
   };
@@ -40,7 +44,8 @@ const ProfilePage = () => {
     const bmi = calculateBMI(weight, height);
     const dailyCalories = calculateCalories(form.gender, weight, height, age);
     setProfile({ name: form.name, age, gender: form.gender, weight, height, bloodType: form.bloodType,
-      conditions: form.conditions, doctorName: form.doctorName, emergencyNumber: form.emergencyNumber, bmi, dailyCalories });
+      conditions: form.conditions, customConditions: form.customConditions, surgeries: form.surgeries,
+      doctorName: form.doctorName, emergencyNumber: form.emergencyNumber, bmi, dailyCalories });
     setEditing(false);
     toast.success(t('prof.savedSuccess'));
   };
@@ -109,6 +114,31 @@ const ProfilePage = () => {
                 </button>
               ))}
             </div>
+            <div className="mt-3">
+              <label className="block text-xs text-muted-foreground mb-1">{t('prof.addCustomCondition')}</label>
+              <div className="flex gap-2">
+                <input value={form.customConditionInput} onChange={e => setForm(p => ({ ...p, customConditionInput: e.target.value }))}
+                  className="flex-1 bg-secondary rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary text-sm"
+                  placeholder={t('prof.customConditionPlaceholder')} />
+                <button onClick={() => { if (form.customConditionInput.trim()) { setForm(p => ({ ...p, customConditions: [...p.customConditions, p.customConditionInput.trim()], customConditionInput: '' })); } }}
+                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">{t('add')}</button>
+              </div>
+              {form.customConditions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.customConditions.map((c, i) => (
+                    <span key={i} className="px-3 py-1 bg-primary text-primary-foreground rounded-xl text-sm font-semibold flex items-center gap-1">
+                      {c} <button onClick={() => setForm(p => ({ ...p, customConditions: p.customConditions.filter((_, j) => j !== i) }))} className="text-primary-foreground/70 hover:text-primary-foreground">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2">{t('prof.surgeries')}</label>
+            <input value={form.surgeries} onChange={e => setForm(p => ({ ...p, surgeries: e.target.value }))}
+              className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary"
+              placeholder={t('prof.surgeriesPlaceholder')} />
           </div>
           <div>
             <label className="block text-sm font-semibold mb-2">{t('prof.doctorName')}</label>
@@ -170,14 +200,24 @@ const ProfilePage = () => {
         <p className="text-3xl font-bold text-primary">{profile.dailyCalories} <span className="text-base font-normal text-muted-foreground">{t('calories')}</span></p>
       </div>
 
-      {conditionLabels.length > 0 && (
+      {(conditionLabels.length > 0 || (profile.customConditions && profile.customConditions.length > 0)) && (
         <div className="medical-card mb-4">
           <div className="flex items-center gap-2 mb-3"><Stethoscope size={18} className="text-primary" /><h3 className="font-bold">{t('prof.conditions')}</h3></div>
           <div className="flex flex-wrap gap-2">
             {conditionLabels.map((label, i) => (
               <span key={i} className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-sm font-semibold">{label}</span>
             ))}
+            {(profile.customConditions || []).map((c, i) => (
+              <span key={`custom-${i}`} className="px-3 py-1 bg-accent/10 text-accent rounded-lg text-sm font-semibold">{c}</span>
+            ))}
           </div>
+        </div>
+      )}
+
+      {profile.surgeries && (
+        <div className="medical-card mb-4">
+          <div className="flex items-center gap-2 mb-3"><Stethoscope size={18} className="text-destructive" /><h3 className="font-bold">{t('prof.surgeries')}</h3></div>
+          <p className="text-sm">{profile.surgeries}</p>
         </div>
       )}
 

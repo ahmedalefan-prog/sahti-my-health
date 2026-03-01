@@ -224,7 +224,8 @@ const ReportPage = () => {
                 <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfBloodType')}:</td><td>{formatBloodType(profile.bloodType)}</td></tr>
                 <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfCaloriesNeeded')}:</td><td>{profile.dailyCalories} {t('calPerDay')}</td></tr>
                 {profile.doctorName && <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfDoctor')}:</td><td>{profile.doctorName}</td></tr>}
-                {conditionLabels.length > 0 && <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfConditions')}:</td><td>{conditionLabels.join('، ')}</td></tr>}
+                {conditionLabels.length > 0 && <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfConditions')}:</td><td>{conditionLabels.join('، ')}{(profile.customConditions && profile.customConditions.length > 0) ? '، ' + profile.customConditions.join('، ') : ''}</td></tr>}
+                {profile.surgeries && <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfSurgeries')}:</td><td>{profile.surgeries}</td></tr>}
               </tbody></table>
             </div>
           )}
@@ -330,6 +331,37 @@ const ReportPage = () => {
                 <p style={{ fontSize: '12px', marginTop: '8px', color: '#555' }}>
                   تحسّن في {improved} تحليل، تدهور في {worsened}، مستقر {stable}
                 </p>
+                {/* Mini bar charts for each comparison */}
+                <div style={{ marginTop: '16px' }}>
+                  <h3 style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '10px', color: '#374151' }}>📊 رسم بياني للتغيرات</h3>
+                  {comparisons.map((c, i) => {
+                    const maxVal = Math.max(c.oldVal, c.newVal) * 1.2 || 1;
+                    const oldPct = Math.round((c.oldVal / maxVal) * 100);
+                    const newPct = Math.round((c.newVal / maxVal) * 100);
+                    const isImproved = c.trend.includes('تحسن');
+                    const isWorsened = c.trend.includes('تدهور');
+                    const barColor = isImproved ? '#16A34A' : isWorsened ? '#DC2626' : '#F59E0B';
+                    return (
+                      <div key={i} style={{ marginBottom: '12px' }}>
+                        <p style={{ fontSize: '11px', fontWeight: 'bold', margin: '0 0 4px', color: '#374151' }}>{c.testName} ({c.unit})</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <span style={{ fontSize: '10px', width: '50px', color: '#666', textAlign: 'left' }}>{c.oldDate.slice(5)}</span>
+                          <div style={{ flex: 1, backgroundColor: '#E5E7EB', borderRadius: '4px', height: '14px', position: 'relative' }}>
+                            <div style={{ width: `${oldPct}%`, backgroundColor: '#93C5FD', borderRadius: '4px', height: '14px', minWidth: '2px' }} />
+                          </div>
+                          <span style={{ fontSize: '10px', width: '40px', textAlign: 'right', fontWeight: 'bold' }}>{c.oldVal}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '10px', width: '50px', color: '#666', textAlign: 'left' }}>{c.newDate.slice(5)}</span>
+                          <div style={{ flex: 1, backgroundColor: '#E5E7EB', borderRadius: '4px', height: '14px', position: 'relative' }}>
+                            <div style={{ width: `${newPct}%`, backgroundColor: barColor, borderRadius: '4px', height: '14px', minWidth: '2px' }} />
+                          </div>
+                          <span style={{ fontSize: '10px', width: '40px', textAlign: 'right', fontWeight: 'bold' }}>{c.newVal}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })()}
