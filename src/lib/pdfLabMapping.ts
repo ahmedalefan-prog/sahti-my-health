@@ -31,8 +31,11 @@ export const PDF_LAB_MAPPINGS: PdfLabTestMapping[] = [
   { key: 'lym_abs', arabicName: 'الليمفاويات', unit: '×10⁹/L', patterns: [/\bLYM\b(?!\s*%)/i], normalMin: 1, normalMax: 4 },
   { key: 'lym_pct', arabicName: 'نسبة الليمفاويات', unit: '%', patterns: [/\bLYM\s*%/i], normalMin: 20, normalMax: 50 },
   { key: 'mon_abs', arabicName: 'الوحيدات', unit: '×10⁹/L', patterns: [/\bMON#\b/i, /\bMON\s*#/i], normalMin: 0.2, normalMax: 1.2 },
+  { key: 'mon_pct', arabicName: 'نسبة الوحيدات', unit: '%', patterns: [/\bMON\s*%/i], normalMin: 3, normalMax: 12 },
   { key: 'eos_abs', arabicName: 'الحمضات', unit: '×10⁹/L', patterns: [/\bEOS#\b/i, /\bEOS\s*#/i], normalMin: 0.02, normalMax: 0.5 },
+  { key: 'eos_pct', arabicName: 'نسبة الحمضات', unit: '%', patterns: [/\bEOS\s*%/i], normalMin: 0.5, normalMax: 5 },
   { key: 'bas_abs', arabicName: 'القاعدات', unit: '×10⁹/L', patterns: [/\bBAS#\b/i, /\bBAS\s*#/i], normalMin: 0, normalMax: 1 },
+  { key: 'bas_pct', arabicName: 'نسبة القاعدات', unit: '%', patterns: [/\bBAS\s*%/i], normalMin: 0, normalMax: 1 },
 
   // Renal
   { key: 'blood_urea', arabicName: 'يوريا الدم', unit: 'mg/dl', patterns: [/\bBlood\s*Urea\b/i, /\bBUN\b/i], normalMin: 17, normalMax: 49 },
@@ -45,7 +48,7 @@ export const PDF_LAB_MAPPINGS: PdfLabTestMapping[] = [
   { key: 'potassium', arabicName: 'البوتاسيوم', unit: 'mmol/L', patterns: [/\bPotassium\s*\(?Electrolyte\)?/i, /\bPotassium\b/i, /\bK\+?\b(?!\s)/i], normalMin: 3.5, normalMax: 5.1 },
   { key: 'chloride', arabicName: 'الكلوريد', unit: 'mmol/L', patterns: [/\bChloride\s*\(?Electrolyte\)?/i, /\bChloride\b/i, /\bCl\b/i], normalMin: 96, normalMax: 110 },
   { key: 's_calcium', arabicName: 'كالسيوم', unit: 'mg/dl', patterns: [/\bS\.?\s*Calcium\b/i, /\bCalcium\b(?!\s*Ion)/i], normalMin: 8.6, normalMax: 10.2 },
-  { key: 'ionized_calcium', arabicName: 'كالسيوم أيوني', unit: 'mg/dl', patterns: [/\bIonized\s*Calcium\b/i, /\bCalcium\s*Ion/i], normalMin: 4.40, normalMax: 5.21 },
+  { key: 'ionized_calcium', arabicName: 'كالسيوم أيوني', unit: 'mg/dl', patterns: [/\bIonized\s*Ca(?:lcium)?\b/i, /\bCalcium\s*Ion/i], normalMin: 4.40, normalMax: 5.21 },
 
   // Liver
   { key: 'alt', arabicName: 'إنزيم الكبد ALT', unit: 'U/L', patterns: [/\bALT\b/i, /\bSGPT\b/i], normalMin: 7, normalMax: 56 },
@@ -87,7 +90,7 @@ export const PDF_LAB_MAPPINGS: PdfLabTestMapping[] = [
   { key: 'esr', arabicName: 'سرعة الترسيب', unit: 'mm/hr', patterns: [/\bESR\b/i], normalMin: 0, normalMax: 20, genderSpecific: { male: { min: 0, max: 15 }, female: { min: 0, max: 20 } } },
 
   // Drug Monitoring
-  { key: 'cyclosporin', arabicName: 'سيكلوسبورين', unit: 'ng/ml', patterns: [/\bCyclosporin\b/i, /\bCyclosporine?\b/i], normalMin: 700, normalMax: 2000 },
+  { key: 'cyclosporin', arabicName: 'سيكلوسبورين', unit: 'ng/ml', patterns: [/\bCyclosporin\b/i, /\bCyclosporine?\b/i, /\bCyclosporin\s*C[\s-]*2\b/i], normalMin: 700, normalMax: 2000 },
   { key: 'tacrolimus', arabicName: 'تاكروليموس', unit: 'ng/ml', patterns: [/\bTacrolimus\b/i], normalMin: 5, normalMax: 15 },
   { key: 'vancomycin', arabicName: 'فانكومايسين', unit: 'mg/L', patterns: [/\bVancomycin\b/i], normalMin: 10, normalMax: 20 },
 ];
@@ -179,66 +182,93 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
   // Split text into lines for scanning
   const lines = text.split(/\n/);
 
+  // Preprocess: split dual-column CBC lines into separate segments
+  // e.g. "WBC 7.89 4 - 11 10⁹/L HGB 9.4 11.5 - 15.5 g/dl" → two segments
+  const processedSegments: string[] = [];
   for (const line of lines) {
-    // CRITICAL: Skip header/patient info lines entirely
     if (isHeaderLine(line)) continue;
+    
+    // Try to detect dual-column lines: look for multiple test name patterns in same line
+    let splitDone = false;
+    for (const mapping of PDF_LAB_MAPPINGS) {
+      for (const pattern of mapping.patterns) {
+        const matches = [...line.matchAll(new RegExp(pattern.source, 'gi'))];
+        if (matches.length >= 1) {
+          // Check if there's ANOTHER test pattern after this one
+          const firstIdx = matches[0].index!;
+          const afterFirst = line.substring(firstIdx + matches[0][0].length);
+          for (const otherMapping of PDF_LAB_MAPPINGS) {
+            if (otherMapping.key === mapping.key) continue;
+            for (const op of otherMapping.patterns) {
+              const otherMatch = afterFirst.match(op);
+              if (otherMatch && otherMatch.index !== undefined) {
+                // Split the line at the second test name
+                const splitPos = firstIdx + matches[0][0].length + otherMatch.index;
+                processedSegments.push(line.substring(0, splitPos).trim());
+                processedSegments.push(line.substring(splitPos).trim());
+                splitDone = true;
+                break;
+              }
+            }
+            if (splitDone) break;
+          }
+        }
+        if (splitDone) break;
+      }
+      if (splitDone) break;
+    }
+    if (!splitDone) {
+      processedSegments.push(line.trim());
+    }
+  }
+
+  for (const segment of processedSegments) {
+    if (!segment || isHeaderLine(segment)) continue;
 
     for (const mapping of PDF_LAB_MAPPINGS) {
       if (foundKeys.has(mapping.key)) continue;
       
       for (const pattern of mapping.patterns) {
-        if (!pattern.test(line)) continue;
+        if (!pattern.test(segment)) continue;
 
         // Handle special ">2000" type values for cyclosporin etc.
-        const gtMatch = line.match(/>\s*(\d+\.?\d*)/);
+        const gtMatch = segment.match(/>\s*(\d+\.?\d*)/);
         
-        // Try to extract a numeric value from the same line
-        const valuePatterns = [
-          // Test name followed by value: "WBC  7.89"
-          new RegExp(pattern.source + '\\s+[|\\s]*([<>]?\\d+\\.?\\d*)', 'i'),
-          // After pipe or multiple spaces: "| 7.89"
-          /\|\s*([<>]?\d+\.?\d*)\s*\|/,
-          // Result column
-          /Result\s*[|:\s]+([<>]?\d+\.?\d*)/i,
-        ];
-
         let value: number | null = null;
-        let rawText = line.trim();
+        let rawText = segment.trim();
         let notes = '';
 
-        // Handle ">2000" specifically
+        // Handle ">2000" specifically for cyclosporin
         if (gtMatch && mapping.key === 'cyclosporin') {
           value = parseFloat(gtMatch[1]);
           notes = '⚠️ أكثر من ' + gtMatch[1] + ' - يرجى المراجعة';
         }
 
         if (value === null) {
-          for (const vp of valuePatterns) {
-            const vm = line.match(vp);
-            if (vm) {
-              const raw = vm[1].replace(/[<>]/g, '');
-              const parsed = parseFloat(raw);
-              if (!isNaN(parsed) && parsed > 0) {
-                // VALIDATION: reject if value equals patient age
-                if (patientAge !== null && parsed === patientAge) continue;
-                value = parsed;
-                break;
-              }
+          // Primary: find the number immediately after the test name
+          const patternMatch = segment.match(new RegExp(pattern.source + '[\\s|:]+([<>]?\\d+\\.?\\d*)', 'i'));
+          if (patternMatch) {
+            const parsed = parseFloat(patternMatch[1].replace(/[<>]/g, ''));
+            if (!isNaN(parsed) && parsed > 0 && (patientAge === null || parsed !== patientAge)) {
+              value = parsed;
             }
           }
         }
 
-        // Fallback: find any reasonable number in the line
         if (value === null) {
-          const numbers = line.match(/\b(\d+\.?\d*)\b/g);
-          if (numbers) {
-            for (const n of numbers) {
-              const parsed = parseFloat(n);
-              if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
-                // VALIDATION: reject if value equals patient age
-                if (patientAge !== null && parsed === patientAge) continue;
-                value = parsed;
-                break;
+          // Secondary: find first reasonable number after the test name position
+          const nameMatch = segment.match(pattern);
+          if (nameMatch && nameMatch.index !== undefined) {
+            const afterName = segment.substring(nameMatch.index + nameMatch[0].length);
+            const numbers = afterName.match(/\b(\d+\.?\d*)\b/g);
+            if (numbers) {
+              for (const n of numbers) {
+                const parsed = parseFloat(n);
+                if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
+                  if (patientAge !== null && parsed === patientAge) continue;
+                  value = parsed;
+                  break;
+                }
               }
             }
           }
