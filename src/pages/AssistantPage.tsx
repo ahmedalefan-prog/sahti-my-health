@@ -1,8 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Copy, Check } from 'lucide-react';
+import { Send, Copy, Check, Trash2 } from 'lucide-react';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { useLanguage } from '@/lib/i18n';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ChatMessage {
   id: string;
@@ -13,13 +24,31 @@ interface ChatMessage {
 
 type QuickFormType = 'mealPlan' | null;
 
+const CHAT_STORAGE_KEY = 'sahti_chat_history';
+const MAX_STORED_MESSAGES = 50;
+
+const loadChatHistory = (): ChatMessage[] => {
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+};
+
+const saveChatHistory = (msgs: ChatMessage[]) => {
+  try {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(msgs.slice(-MAX_STORED_MESSAGES)));
+  } catch { /* storage full */ }
+};
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/health-chat`;
 
 const AssistantPage = () => {
   const { profile, labResults, medications, addLabResult, addJournalEntry } = useStore();
   const { t, lang } = useLanguage();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadChatHistory);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(() => localStorage.getItem('sahti_ai_disclaimer') !== 'true');
@@ -29,9 +58,20 @@ const AssistantPage = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Persist messages to localStorage
+  useEffect(() => {
+    saveChatHistory(messages);
+  }, [messages]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+    toast.success(lang === 'ar' ? 'تم مسح المحادثة' : 'Chat cleared');
+  };
 
   const getPatientContext = useCallback(() => {
     if (!profile) return null;
@@ -244,7 +284,30 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
     <div className="flex flex-col h-[calc(100vh-80px)] animate-fade-in">
       {/* Header */}
       <div className="px-4 pt-6 pb-3 flex-shrink-0">
-        <h1 className="text-2xl font-bold">{lang === 'ar' ? 'مساعد صحتي 🧠' : 'Health Assistant 🧠'}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">{lang === 'ar' ? 'مساعد صحتي 🧠' : 'Health Assistant 🧠'}</h1>
+          {messages.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                  <Trash2 size={18} />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{lang === 'ar' ? 'هل تريد مسح المحادثة؟' : 'Clear chat history?'}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {lang === 'ar' ? 'سيتم حذف جميع الرسائل نهائياً.' : 'All messages will be permanently deleted.'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearChat}>{lang === 'ar' ? 'مسح' : 'Clear'}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           {lang === 'ar' ? 'كيف يمكنني مساعدتك اليوم؟' : 'How can I help you today?'}
         </p>
