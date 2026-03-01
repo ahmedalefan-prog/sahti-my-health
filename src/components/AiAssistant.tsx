@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Copy, FileUp, Loader2, Check } from 'lucide-react';
+import { X, Send, Copy, Loader2, Check } from 'lucide-react';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { useLanguage } from '@/lib/i18n';
 import { toast } from 'sonner';
-import { LAB_TESTS, getLabStatus } from '@/lib/constants';
 
 interface ChatMessage {
   id: string;
@@ -48,7 +47,7 @@ const AiAssistant = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const apiKey = localStorage.getItem('sahti_gemini_key') || '';
+  const apiKey = localStorage.getItem('sahti_openai_key') || '';
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -107,28 +106,38 @@ ${medSummary}
 6. أنت تعرف بيانات المريض${gender === 'female' ? 'ة' : ''} الكاملة المذكورة أعلاه`;
   }, [profile, labResults, medications]);
 
-  const callGemini = async (userText: string, pdfBase64?: string) => {
+  const callOpenAI = async (userText: string, pdfBase64?: string) => {
     if (!apiKey) return null;
 
-    const parts: any[] = [];
+    const messages: any[] = [
+      { role: 'system', content: pdfBase64 ? 'You are a medical lab report extraction assistant.' : getSystemPrompt() },
+    ];
+
     if (pdfBase64) {
-      parts.push({ inline_data: { mime_type: 'application/pdf', data: pdfBase64 } });
-    }
-    parts.push({ text: userText });
-
-    const body: any = {
-      contents: [{ role: 'user', parts }],
-      generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
-    };
-
-    if (!pdfBase64) {
-      body.system_instruction = { parts: [{ text: getSystemPrompt() }] };
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: userText },
+          { type: 'image_url', image_url: { url: `data:application/pdf;base64,${pdfBase64}` } }
+        ]
+      });
+    } else {
+      messages.push({ role: 'user', content: userText });
     }
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-    );
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 1500,
+        temperature: 0.7,
+        messages,
+      }),
+    });
 
     if (!res.ok) {
       if (res.status === 429) throw new Error('RATE_LIMIT');
@@ -136,7 +145,7 @@ ${medSummary}
     }
 
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    return data.choices?.[0]?.message?.content || null;
   };
 
   const sendMessage = async (text: string) => {
@@ -148,13 +157,13 @@ ${medSummary}
     setLoading(true);
 
     try {
-      const response = await callGemini(text);
+      const response = await callOpenAI(text);
       if (response) {
         setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: response, timestamp: Date.now() }]);
       }
     } catch (err: any) {
       const errorMsg = err.message === 'RATE_LIMIT'
-        ? (lang === 'ar' ? 'تجاوزت الحد المجاني مؤقتاً، انتظر دقيقة ⏳' : 'Rate limit reached, wait a minute ⏳')
+        ? (lang === 'ar' ? 'تجاوزت الحد مؤقتاً، انتظر دقيقة ⏳' : 'Rate limit reached, wait a minute ⏳')
         : (lang === 'ar' ? 'حدث خطأ، تحقق من المفتاح وحاول مجدداً ❌' : 'Error occurred, check your key and try again ❌');
       setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: errorMsg, timestamp: Date.now() }]);
     } finally {
@@ -164,7 +173,7 @@ ${medSummary}
 
   const handleOpen = () => {
     if (!apiKey) {
-      toast.error(lang === 'ar' ? 'أضف مفتاح Gemini في الإعدادات أولاً 🔑' : 'Add Gemini key in Settings first 🔑');
+      toast.error(lang === 'ar' ? 'أضف مفتاح OpenAI في الإعدادات أولاً 🔑' : 'Add OpenAI key in Settings first 🔑');
       return;
     }
     if (!hasSeenDisclaimer) {
@@ -210,10 +219,9 @@ ${medSummary}
 - أسماء عربية صحيحة للتحاليل المعروفة
 - status: normal إذا ضمن النطاق، high إذا أعلى، low إذا أقل`;
 
-      const response = await callGemini(prompt, base64);
+      const response = await callOpenAI(prompt, base64);
       if (!response) throw new Error('No response');
 
-      // Extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON');
 
@@ -303,17 +311,24 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
     toast.success(lang === 'ar' ? 'تم الحفظ في يومياتي 📔' : 'Saved to journal 📔');
   };
 
-  // Floating button (shown when chat is closed)
+  // Floating pill button
   const FloatingButton = () => (
     <button
       onClick={handleOpen}
-      className={`fixed z-40 w-14 h-14 rounded-full gradient-primary shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${lang === 'ar' ? 'left-4' : 'right-4'}`}
-      style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px) + 8px)' }}
+      className="fixed z-40 flex items-center justify-center gap-2 rounded-full shadow-xl transition-all hover:scale-105 active:scale-95 animate-ai-fab-in"
+      style={{
+        bottom: 'calc(80px + env(safe-area-inset-bottom, 0px) + 20px)',
+        right: lang === 'ar' ? 'auto' : '16px',
+        left: lang === 'ar' ? '16px' : 'auto',
+        width: '130px',
+        height: '56px',
+        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+        boxShadow: '0 4px 20px rgba(99, 102, 241, 0.4)',
+        animation: !hasAnimated ? 'ai-fab-in 0.5s ease-out, ai-fab-pulse 3s ease-in-out 1s infinite' : 'ai-fab-pulse 3s ease-in-out infinite',
+      }}
     >
-      <span className="text-2xl">🧠</span>
-      {!hasAnimated && (
-        <span className="absolute inset-0 rounded-full animate-ping bg-primary/30" />
-      )}
+      <span className="text-xl">🧠</span>
+      <span className="text-white font-bold text-sm">{lang === 'ar' ? 'مساعدي' : 'Assistant'}</span>
     </button>
   );
 

@@ -9,9 +9,9 @@ const SettingsPage = () => {
   const { settings, updateSettings, resetAllData } = useStore();
   const { t, lang, labLang, setLang, setLabLang } = useLanguage();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('sahti_gemini_key') || '');
+  const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('sahti_openai_key') || '');
   const [showKey, setShowKey] = useState(false);
-  const isAiConnected = !!localStorage.getItem('sahti_gemini_key');
+  const isAiConnected = !!localStorage.getItem('sahti_openai_key');
 
   const handleNotificationToggle = async (enabled: boolean) => {
     if (enabled && 'Notification' in window) {
@@ -77,9 +77,9 @@ const SettingsPage = () => {
           <div className="relative">
             <input
               type={showKey ? 'text' : 'password'}
-              value={geminiKey}
-              onChange={e => setGeminiKey(e.target.value)}
-              placeholder="AIzaSy..."
+              value={openaiKey}
+              onChange={e => setOpenaiKey(e.target.value)}
+              placeholder="sk-..."
               className="w-full bg-secondary rounded-xl px-4 py-3 pe-12 outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
             />
             <button onClick={() => setShowKey(!showKey)} className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground">
@@ -88,11 +88,11 @@ const SettingsPage = () => {
           </div>
           <button
             onClick={() => {
-              if (geminiKey.trim()) {
-                localStorage.setItem('sahti_gemini_key', geminiKey.trim());
+              if (openaiKey.trim()) {
+                localStorage.setItem('sahti_openai_key', openaiKey.trim());
                 toast.success(t('set.aiKeySaved'));
               } else {
-                localStorage.removeItem('sahti_gemini_key');
+                localStorage.removeItem('sahti_openai_key');
                 toast.info(t('set.aiKeyRemoved'));
               }
               // Force re-render
@@ -104,7 +104,7 @@ const SettingsPage = () => {
           </button>
           <p className="text-xs text-muted-foreground text-center">{t('set.aiFree')}</p>
           <a
-            href="https://aistudio.google.com/app/apikey"
+            href="https://platform.openai.com/api-keys"
             target="_blank"
             rel="noopener noreferrer"
             className="block text-center text-sm font-semibold text-primary hover:underline"
