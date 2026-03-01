@@ -1,148 +1,150 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Copy, Check, Settings, Brain } from 'lucide-react';
+import { Send, Copy, Check } from 'lucide-react';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { useLanguage } from '@/lib/i18n';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   text: string;
   timestamp: number;
 }
 
-interface AiLabResult {
-  name_ar: string;
-  name_en: string;
-  value: number | null;
-  unit: string;
-  min: number;
-  max: number;
-  status: string;
-}
-
-interface AiPdfResponse {
-  date: string;
-  results: AiLabResult[];
-}
-
 type QuickFormType = 'mealPlan' | null;
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/health-chat`;
 
 const AssistantPage = () => {
   const { profile, labResults, medications, addLabResult, addJournalEntry } = useStore();
   const { t, lang } = useLanguage();
-  const navigate = useNavigate();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(() => localStorage.getItem('sahti_ai_disclaimer') !== 'true');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [pdfPreview, setPdfPreview] = useState<{ date: string; results: AiLabResult[] } | null>(null);
   const [quickForm, setQuickForm] = useState<QuickFormType>(null);
   const [mealFormData, setMealFormData] = useState({ meals: 3, fasting: false, dislikes: '' });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const apiKey = localStorage.getItem('sahti_openai_key') || '';
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const getSystemPrompt = useCallback(() => {
-    const name = profile?.name || 'المستخدم';
-    const age = profile?.age || '?';
-    const gender = profile?.gender || 'male';
-    const height = profile?.height || '?';
-    const weight = profile?.weight || '?';
-    const bloodType = profile?.bloodType || '?';
-    const bmi = profile?.bmi || '?';
-    const conditions = profile?.conditions?.length ? profile.conditions.join('، ') : 'لا يوجد';
-    const doctor = profile?.doctorName || 'غير محدد';
-    const calories = profile?.dailyCalories || '?';
-
+  const getPatientContext = useCallback(() => {
+    if (!profile) return null;
     const labSummary = labResults.slice(0, 15).map(l =>
-      `- ${l.testName}: ${l.value} ${l.unit} (النطاق: ${l.testKey}) - ${l.status}`
+      `- ${l.testName}: ${l.value} ${l.unit} (${l.testKey}) - ${l.status}`
     ).join('\n') || 'لا توجد تحاليل';
 
     const medSummary = medications.map(m =>
       `- ${m.name}: ${m.dose} - ${m.frequency}`
     ).join('\n') || 'لا توجد أدوية';
 
-    return `أنت مساعد صحي ذكي اسمك "سالم" لمريض${gender === 'female' ? 'ة' : ''} اسم${gender === 'female' ? 'ها' : 'ه'} ${name}،
-عمر${gender === 'female' ? 'ها' : 'ه'} ${age} سنة، ${gender === 'female' ? 'أنثى' : 'ذكر'}،
-طول${gender === 'female' ? 'ها' : 'ه'} ${height} سم، وزن${gender === 'female' ? 'ها' : 'ه'} ${weight} كغ،
-فصيلة دم${gender === 'female' ? 'ها' : 'ه'} ${bloodType}، BMI: ${bmi}.
-أمراض${gender === 'female' ? 'ها' : 'ه'} المزمنة: ${conditions}.
-طبيب${gender === 'female' ? 'ها' : 'ه'} المعالج: ${doctor}.
-السعرات اليومية المطلوبة: ${calories}.
-
-آخر نتائج تحاليل${gender === 'female' ? 'ها' : 'ه'}:
-${labSummary}
-
-أدوية${gender === 'female' ? 'ها' : 'ه'} الحالية:
-${medSummary}
-
-قواعدك:
-1. تكلم بالعربية دائماً بلغة بسيطة ومشجعة
-2. لا تعطِ تشخيصاً طبياً قاطعاً أبداً
-3. دائماً شجع على مراجعة الطبيب للأمور المهمة
-4. ردودك منظمة ومختصرة (لا تطول أكثر من اللازم)
-5. استخدم الرموز التعبيرية لتجميل الردود
-6. أنت تعرف بيانات المريض${gender === 'female' ? 'ة' : ''} الكاملة المذكورة أعلاه`;
+    return {
+      name: profile.name,
+      age: profile.age,
+      gender: profile.gender,
+      height: profile.height,
+      weight: profile.weight,
+      bloodType: profile.bloodType,
+      bmi: profile.bmi,
+      conditions: profile.conditions?.length ? profile.conditions.join('، ') : 'لا يوجد',
+      doctorName: profile.doctorName,
+      dailyCalories: profile.dailyCalories,
+      labSummary,
+      medSummary,
+    };
   }, [profile, labResults, medications]);
 
-  const callOpenAI = async (userText: string, pdfBase64?: string) => {
-    const key = localStorage.getItem('sahti_openai_key');
-    if (!key) return null;
+  const streamChat = async (userText: string) => {
+    const resp = await fetch(CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: userText }],
+        patientContext: getPatientContext(),
+      }),
+    });
 
-    const msgs: any[] = [
-      { role: 'system', content: pdfBase64 ? 'You are a medical lab report extraction assistant.' : getSystemPrompt() },
-    ];
-
-    if (pdfBase64) {
-      msgs.push({
-        role: 'user',
-        content: [
-          { type: 'text', text: userText },
-          { type: 'image_url', image_url: { url: `data:application/pdf;base64,${pdfBase64}` } }
-        ]
-      });
-    } else {
-      msgs.push({ role: 'user', content: userText });
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+      throw new Error(errData.error || `HTTP ${resp.status}`);
     }
 
-    try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + key,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: 1500,
-          temperature: 0.7,
-          messages: msgs,
-        }),
-      });
+    if (!resp.body) throw new Error('No response body');
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        console.error('OpenAI API Error:', res.status, errorData);
-        if (res.status === 429) throw new Error('RATE_LIMIT');
-        throw new Error(errorData?.error?.message || `API Error ${res.status}: ${res.statusText}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = '';
+    let assistantSoFar = '';
+    const assistantId = generateId();
+
+    // Add empty assistant message
+    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '', timestamp: Date.now() }]);
+
+    let streamDone = false;
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') { streamDone = true; break; }
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) {
+            assistantSoFar += content;
+            setMessages(prev =>
+              prev.map(m => m.id === assistantId ? { ...m, text: assistantSoFar } : m)
+            );
+          }
+        } catch {
+          textBuffer = line + '\n' + textBuffer;
+          break;
+        }
       }
-
-      const data = await res.json();
-      return data.choices[0].message.content;
-    } catch (error) {
-      console.error('Full OpenAI error:', error);
-      throw error;
     }
+
+    // Final flush
+    if (textBuffer.trim()) {
+      for (let raw of textBuffer.split('\n')) {
+        if (!raw) continue;
+        if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+        if (raw.startsWith(':') || raw.trim() === '') continue;
+        if (!raw.startsWith('data: ')) continue;
+        const jsonStr = raw.slice(6).trim();
+        if (jsonStr === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) {
+            assistantSoFar += content;
+            setMessages(prev =>
+              prev.map(m => m.id === assistantId ? { ...m, text: assistantSoFar } : m)
+            );
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    return assistantSoFar;
   };
 
   const sendMessage = async (text: string) => {
@@ -153,19 +155,10 @@ ${medSummary}
     setLoading(true);
 
     try {
-      const response = await callOpenAI(text);
-      if (response) {
-        setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: response, timestamp: Date.now() }]);
-      }
+      await streamChat(text.trim());
     } catch (err: any) {
       console.error('sendMessage error:', err);
-      let errorMsg: string;
-      if (err.message === 'RATE_LIMIT') {
-        errorMsg = lang === 'ar' ? 'تجاوزت الحد مؤقتاً، انتظر دقيقة ⏳' : 'Rate limit reached, wait a minute ⏳';
-      } else {
-        errorMsg = `❌ خطأ: ${err.message}`;
-      }
-      setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: errorMsg, timestamp: Date.now() }]);
+      setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: `❌ خطأ: ${err.message}`, timestamp: Date.now() }]);
     } finally {
       setLoading(false);
     }
@@ -176,96 +169,10 @@ ${medSummary}
     localStorage.setItem('sahti_ai_disclaimer', 'true');
   };
 
-  const handlePdfImport = async (file: File) => {
-    setLoading(true);
-    try {
-      const buffer = await file.arrayBuffer();
-      const base64 = btoa(new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-
-      const prompt = `استخرج جميع نتائج التحاليل من هذا التقرير المخبري.
-أجب بـ JSON فقط بدون أي نص إضافي:
-{
-  "date": "YYYY-MM-DD",
-  "results": [
-    {
-      "name_ar": "اسم التحليل بالعربية",
-      "name_en": "Test Name",
-      "value": 12.5,
-      "unit": "g/dl",
-      "min": 11.5,
-      "max": 15.5,
-      "status": "normal|high|low"
-    }
-  ]
-}
-تعليمات:
-- تجاهل اسم المريض، العمر، رقم العينة
-- إذا كانت القيمة ">2000" استخرج 2000 كرقم
-- إذا كانت القيمة نصية ضع value: null
-- أسماء عربية صحيحة للتحاليل المعروفة
-- status: normal إذا ضمن النطاق، high إذا أعلى، low إذا أقل`;
-
-      const response = await callOpenAI(prompt, base64);
-      if (!response) throw new Error('No response');
-
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON');
-
-      const parsed: AiPdfResponse = JSON.parse(jsonMatch[0]);
-      if (!parsed.results?.length) throw new Error('No results');
-
-      setPdfPreview(parsed);
-
-      setMessages(prev => [...prev, {
-        id: generateId(), role: 'assistant',
-        text: `✅ ${lang === 'ar' ? 'تم استخراج' : 'Extracted'} ${parsed.results.length} ${lang === 'ar' ? 'تحليل - تأكد قبل الحفظ' : 'results - confirm before saving'}`,
-        timestamp: Date.now()
-      }]);
-    } catch (err) {
-      console.error('AI PDF import error:', err);
-      setMessages(prev => [...prev, {
-        id: generateId(), role: 'assistant',
-        text: lang === 'ar' ? 'لم أتمكن من قراءة التقرير، حاول مرة أخرى ❌' : 'Could not read the report, try again ❌',
-        timestamp: Date.now()
-      }]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const savePdfResults = () => {
-    if (!pdfPreview) return;
-    let count = 0;
-    for (const r of pdfPreview.results) {
-      if (r.value === null) continue;
-      const status = r.status === 'normal' ? 'normal' : r.status === 'high' ? 'danger' : 'warning';
-      addLabResult({
-        id: generateId(),
-        testKey: r.name_en.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-        testName: r.name_ar,
-        value: r.value,
-        unit: r.unit,
-        date: pdfPreview.date || new Date().toISOString().split('T')[0],
-        notes: 'مستورد من PDF بالذكاء الاصطناعي',
-        status: status as 'normal' | 'warning' | 'danger',
-      });
-      count++;
-    }
-    toast.success(`🎉 ${lang === 'ar' ? `تم حفظ ${count} تحليل بنجاح!` : `${count} results saved!`}`);
-    setPdfPreview(null);
-  };
-
   const handleQuickAction = (action: string) => {
-    if (!apiKey) {
-      toast.error(lang === 'ar' ? 'أضف مفتاح OpenAI في الإعدادات أولاً 🔑' : 'Add OpenAI key in Settings first 🔑');
-      return;
-    }
     const doctor = profile?.doctorName || (lang === 'ar' ? 'الطبيب' : 'the doctor');
 
     switch (action) {
-      case 'pdf':
-        fileRef.current?.click();
-        break;
       case 'analyze':
         sendMessage('حللي تحاليلي الأخيرة وأخبريني بشكل مبسط:\n📋 ما الذي يحتاج انتباهاً؟\n📈 ماذا تحسن وماذا ساء مقارنة بالسابق؟\n💡 ماذا يعني كل رقم خارج النطاق الطبيعي؟');
         break;
@@ -274,6 +181,9 @@ ${medSummary}
         break;
       case 'meal':
         setQuickForm('mealPlan');
+        break;
+      case 'tips':
+        sendMessage('أعطني نصائح صحية يومية مخصصة لحالتي الصحية وأدويتي وتحاليلي. ركز على التغذية والنشاط البدني ونمط الحياة.');
         break;
     }
   };
@@ -324,10 +234,10 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
   }
 
   const quickActions = [
-    { key: 'pdf', emoji: '📄', label: lang === 'ar' ? 'استيراد PDF' : 'Import PDF', subtitle: lang === 'ar' ? 'بالذكاء' : 'with AI', bg: 'bg-blue-500/10 dark:bg-blue-500/20', border: 'border-blue-500/20' },
     { key: 'analyze', emoji: '📊', label: lang === 'ar' ? 'حلل تحاليلي' : 'Analyze Labs', subtitle: lang === 'ar' ? 'الأخيرة' : 'latest', bg: 'bg-green-500/10 dark:bg-green-500/20', border: 'border-green-500/20' },
     { key: 'questions', emoji: '❓', label: lang === 'ar' ? 'أسئلة' : 'Doctor', subtitle: lang === 'ar' ? 'للطبيب' : 'Questions', bg: 'bg-orange-500/10 dark:bg-orange-500/20', border: 'border-orange-500/20' },
     { key: 'meal', emoji: '🍽️', label: lang === 'ar' ? 'جدول' : 'Meal', subtitle: lang === 'ar' ? 'غذائي' : 'Plan', bg: 'bg-purple-500/10 dark:bg-purple-500/20', border: 'border-purple-500/20' },
+    { key: 'tips', emoji: '💡', label: lang === 'ar' ? 'نصائح' : 'Health', subtitle: lang === 'ar' ? 'صحية' : 'Tips', bg: 'bg-blue-500/10 dark:bg-blue-500/20', border: 'border-blue-500/20' },
   ];
 
   return (
@@ -339,28 +249,12 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
           {lang === 'ar' ? 'كيف يمكنني مساعدتك اليوم؟' : 'How can I help you today?'}
         </p>
         <div className="flex items-center gap-2 mt-2">
-          <span className={`w-2 h-2 rounded-full ${apiKey ? 'bg-green-500' : 'bg-destructive'}`} />
+          <span className="w-2 h-2 rounded-full bg-green-500" />
           <span className="text-xs text-muted-foreground">
-            {apiKey ? (lang === 'ar' ? 'جاهز' : 'Ready') : (lang === 'ar' ? 'يحتاج إعداد' : 'Needs setup')}
+            {lang === 'ar' ? 'جاهز' : 'Ready'}
           </span>
         </div>
       </div>
-
-      {/* No API Key Banner */}
-      {!apiKey && (
-        <div className="mx-4 mb-3 p-4 rounded-2xl bg-warning/10 border border-warning/30 flex-shrink-0">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">🔑</span>
-            <div className="flex-1">
-              <p className="font-bold text-sm">{lang === 'ar' ? 'فعّل المساعد الذكي' : 'Activate AI Assistant'}</p>
-              <p className="text-xs text-muted-foreground mt-1">{lang === 'ar' ? 'أضف مفتاح API في الإعدادات' : 'Add API key in Settings'}</p>
-              <button onClick={() => navigate('/settings')} className="mt-2 text-xs font-bold text-primary hover:underline">
-                {lang === 'ar' ? 'الذهاب للإعدادات →' : 'Go to Settings →'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Quick Actions Grid */}
       <div className="px-4 mb-3 flex-shrink-0">
@@ -393,7 +287,7 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}>
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-              {msg.role === 'assistant' && (
+              {msg.role === 'assistant' && msg.text && (
                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
                   <button onClick={() => copyText(msg.id, msg.text)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                     {copiedId === msg.id ? <Check size={12} /> : <Copy size={12} />}
@@ -407,37 +301,6 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
             </div>
           </div>
         ))}
-
-        {/* PDF Preview */}
-        {pdfPreview && (
-          <div className="bg-card rounded-2xl border border-primary/30 p-4 space-y-3">
-            <h4 className="font-bold text-sm flex items-center gap-2">
-              ✅ {lang === 'ar' ? `تم استخراج ${pdfPreview.results.length} تحليل` : `${pdfPreview.results.length} results extracted`}
-            </h4>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {pdfPreview.results.map((r, i) => (
-                <div key={i} className="flex items-center justify-between bg-secondary/50 rounded-xl p-2.5 text-sm">
-                  <span className="font-semibold">{r.name_ar}</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-bold ${r.status === 'normal' ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-                      {r.value ?? 'N/A'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{r.unit}</span>
-                    <span className="text-xs">{r.status === 'normal' ? '🟢' : r.status === 'high' ? '🔴' : '🟡'}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={savePdfResults} className="flex-1 gradient-primary text-primary-foreground font-bold py-3 rounded-2xl">
-                {lang === 'ar' ? '💾 حفظ في تحاليلي' : '💾 Save to My Labs'}
-              </button>
-              <button onClick={() => setPdfPreview(null)} className="px-4 bg-secondary font-bold py-3 rounded-2xl">
-                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Meal Plan Quick Form */}
         {quickForm === 'mealPlan' && (
@@ -493,17 +356,14 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
             placeholder={lang === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
             className="flex-1 bg-secondary rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-ring text-sm"
-            disabled={loading || !apiKey}
+            disabled={loading}
           />
-          <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading || !apiKey}
+          <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading}
             className="w-11 h-11 rounded-full gradient-primary flex items-center justify-center disabled:opacity-40">
             <Send size={18} className="text-primary-foreground" />
           </button>
         </div>
       </div>
-
-      <input ref={fileRef} type="file" accept=".pdf" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfImport(f); e.target.value = ''; }} />
     </div>
   );
 };

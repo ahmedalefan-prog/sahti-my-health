@@ -1,7 +1,7 @@
 import { useStore } from '@/lib/store';
 import { useLanguage } from '@/lib/i18n';
 import { Switch } from '@/components/ui/switch';
-import { Moon, Bell, Clock, Trash2, Settings, Languages, Brain, Eye, EyeOff } from 'lucide-react';
+import { Moon, Bell, Clock, Trash2, Settings, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
@@ -9,9 +9,6 @@ const SettingsPage = () => {
   const { settings, updateSettings, resetAllData } = useStore();
   const { t, lang, labLang, setLang, setLabLang } = useLanguage();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('sahti_openai_key') || '');
-  const [showKey, setShowKey] = useState(false);
-  const isAiConnected = !!localStorage.getItem('sahti_openai_key');
 
   const handleNotificationToggle = async (enabled: boolean) => {
     if (enabled && 'Notification' in window) {
@@ -59,58 +56,6 @@ const SettingsPage = () => {
               English
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* AI Assistant */}
-      <div className="medical-card-elevated mb-4">
-        <h3 className="font-bold mb-4 flex items-center gap-2">
-          <Brain size={18} className="text-primary" /> {t('set.ai')}
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">{t('set.aiKey')}</p>
-            <span className={`text-xs font-bold ${isAiConnected ? 'text-success' : 'text-destructive'}`}>
-              {isAiConnected ? t('set.aiConnected') : t('set.aiDisconnected')}
-            </span>
-          </div>
-          <div className="relative">
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={openaiKey}
-              onChange={e => setOpenaiKey(e.target.value)}
-              placeholder="sk-..."
-              className="w-full bg-secondary rounded-xl px-4 py-3 pe-12 outline-none focus:ring-2 focus:ring-primary text-sm font-mono"
-            />
-            <button onClick={() => setShowKey(!showKey)} className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground">
-              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          <button
-            onClick={() => {
-              if (openaiKey.trim()) {
-                localStorage.setItem('sahti_openai_key', openaiKey.trim());
-                toast.success(t('set.aiKeySaved'));
-              } else {
-                localStorage.removeItem('sahti_openai_key');
-                toast.info(t('set.aiKeyRemoved'));
-              }
-              // Force re-render
-              window.dispatchEvent(new Event('storage'));
-            }}
-            className="w-full gradient-primary text-primary-foreground font-bold py-3 rounded-2xl"
-          >
-            {t('set.aiSaveKey')}
-          </button>
-          <p className="text-xs text-muted-foreground text-center">{t('set.aiFree')}</p>
-          <a
-            href="https://platform.openai.com/api-keys"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center text-sm font-semibold text-primary hover:underline"
-          >
-            {t('set.aiGetKey')}
-          </a>
         </div>
       </div>
 
