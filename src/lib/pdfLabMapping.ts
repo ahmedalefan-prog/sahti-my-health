@@ -20,9 +20,11 @@ export const PDF_LAB_MAPPINGS: PdfLabTestMapping[] = [
   { key: 'mcv', arabicName: 'حجم الكرية', unit: 'fl', patterns: [/\bMCV\b/i], normalMin: 80, normalMax: 100 },
   { key: 'mch', arabicName: 'هيموغلوبين الكرية', unit: 'pg', patterns: [/\bMCH\b(?!C)/i], normalMin: 27, normalMax: 32 },
   { key: 'mchc', arabicName: 'تركيز الهيموغلوبين', unit: 'g/dl', patterns: [/\bMCHC\b/i], normalMin: 32, normalMax: 36 },
-  { key: 'rdw_cv', arabicName: 'توزيع الكريات', unit: '%', patterns: [/\bRDW[\s-]?CV\b/i], normalMin: 11, normalMax: 16 },
+  { key: 'rdw_cv', arabicName: 'توزيع الكريات RDW-CV', unit: '%', patterns: [/\bRDW[\s-]?CV\b/i], normalMin: 11, normalMax: 16 },
+  { key: 'rdw_sd', arabicName: 'توزيع الكريات RDW-SD', unit: 'fL', patterns: [/\bRDW[\s-]?SD\b/i], normalMin: 35, normalMax: 56 },
   { key: 'plt', arabicName: 'الصفائح الدموية', unit: '×10⁹/L', patterns: [/\bPLT\b/i, /\bPlatelets?\b/i], normalMin: 100, normalMax: 400 },
   { key: 'mpv', arabicName: 'حجم الصفيحة', unit: 'fl', patterns: [/\bMPV\b/i], normalMin: 7, normalMax: 11 },
+  { key: 'pdw', arabicName: 'توزيع الصفائح PDW', unit: '', patterns: [/\bPDW\b/i], normalMin: 9, normalMax: 17 },
   { key: 'pct', arabicName: 'نسبة الصفائح', unit: '%', patterns: [/\bPCT\b/i], normalMin: 0.1, normalMax: 0.28 },
   { key: 'neu_abs', arabicName: 'العدلات', unit: '×10⁹/L', patterns: [/\bNEU#\b/i, /\bNEU\s*#/i], normalMin: 2, normalMax: 7 },
   { key: 'neu_pct', arabicName: 'نسبة العدلات', unit: '%', patterns: [/\bNEU%\b/i, /\bNEU\s*%/i], normalMin: 50, normalMax: 70 },
@@ -38,10 +40,12 @@ export const PDF_LAB_MAPPINGS: PdfLabTestMapping[] = [
   { key: 'uric_acid', arabicName: 'حمض اليوريك', unit: 'mg/dl', patterns: [/\bUric\s*Acid\b/i], normalMin: 0, normalMax: 7, genderSpecific: { male: { min: 0, max: 7 }, female: { min: 0, max: 5.7 } } },
   { key: 'egfr', arabicName: 'معدل الترشيح الكلوي', unit: 'ml/min', patterns: [/\beGFR\b/i], normalMin: 60, normalMax: 999 },
 
-  // Electrolytes
-  { key: 'sodium', arabicName: 'الصوديوم', unit: 'mmol/L', patterns: [/\bSodium\b/i, /\bNa\b/i], normalMin: 135, normalMax: 148 },
-  { key: 'potassium', arabicName: 'البوتاسيوم', unit: 'mmol/L', patterns: [/\bPotassium\b/i, /\bK\b(?!\s)/i], normalMin: 3.5, normalMax: 5.1 },
-  { key: 'chloride', arabicName: 'الكلوريد', unit: 'mmol/L', patterns: [/\bChloride\b/i, /\bCl\b/i], normalMin: 96, normalMax: 110 },
+  // Electrolytes - specific patterns for "(Electrolyte)" suffix
+  { key: 'sodium', arabicName: 'الصوديوم', unit: 'mmol/L', patterns: [/\bSodium\s*\(?Electrolyte\)?/i, /\bSodium\b/i, /\bNa\b/i], normalMin: 135, normalMax: 148 },
+  { key: 'potassium', arabicName: 'البوتاسيوم', unit: 'mmol/L', patterns: [/\bPotassium\s*\(?Electrolyte\)?/i, /\bPotassium\b/i, /\bK\+?\b(?!\s)/i], normalMin: 3.5, normalMax: 5.1 },
+  { key: 'chloride', arabicName: 'الكلوريد', unit: 'mmol/L', patterns: [/\bChloride\s*\(?Electrolyte\)?/i, /\bChloride\b/i, /\bCl\b/i], normalMin: 96, normalMax: 110 },
+  { key: 's_calcium', arabicName: 'كالسيوم', unit: 'mg/dl', patterns: [/\bS\.?\s*Calcium\b/i, /\bCalcium\b(?!\s*Ion)/i], normalMin: 8.6, normalMax: 10.2 },
+  { key: 'ionized_calcium', arabicName: 'كالسيوم أيوني', unit: 'mg/dl', patterns: [/\bIonized\s*Calcium\b/i, /\bCalcium\s*Ion/i], normalMin: 4.40, normalMax: 5.21 },
 
   // Liver
   { key: 'alt', arabicName: 'إنزيم الكبد ALT', unit: 'U/L', patterns: [/\bALT\b/i, /\bSGPT\b/i], normalMin: 7, normalMax: 56 },
@@ -83,7 +87,7 @@ export const PDF_LAB_MAPPINGS: PdfLabTestMapping[] = [
   { key: 'esr', arabicName: 'سرعة الترسيب', unit: 'mm/hr', patterns: [/\bESR\b/i], normalMin: 0, normalMax: 20, genderSpecific: { male: { min: 0, max: 15 }, female: { min: 0, max: 20 } } },
 
   // Drug Monitoring
-  { key: 'cyclosporin', arabicName: 'سيكلوسبورين', unit: 'ng/ml', patterns: [/\bCyclosporin\b/i], normalMin: 700, normalMax: 1800 },
+  { key: 'cyclosporin', arabicName: 'سيكلوسبورين', unit: 'ng/ml', patterns: [/\bCyclosporin\b/i, /\bCyclosporine?\b/i], normalMin: 700, normalMax: 2000 },
   { key: 'tacrolimus', arabicName: 'تاكروليموس', unit: 'ng/ml', patterns: [/\bTacrolimus\b/i], normalMin: 5, normalMax: 15 },
   { key: 'vancomycin', arabicName: 'فانكومايسين', unit: 'mg/L', patterns: [/\bVancomycin\b/i], normalMin: 10, normalMax: 20 },
 ];
@@ -114,6 +118,25 @@ function getStatus(value: number, min: number, max: number): 'normal' | 'warning
   const diff = value < min ? min - value : value - max;
   if (diff / range < 0.1) return 'warning';
   return 'danger';
+}
+
+// Header line patterns to skip (patient info lines that should never be parsed for values)
+const HEADER_PATTERNS = [
+  /\bSample\s*Code\b/i,
+  /\bPatient\s*Name\b/i,
+  /\bGender\s*\/?\s*Age\b/i,
+  /\bRef\.?\s*By\b/i,
+  /\bSample\s*In\b/i,
+  /\bSample\s*Out\b/i,
+  /\bReferred\s*By\b/i,
+  /\bDoctor\b/i,
+  /\bDate\s*of\s*Birth\b/i,
+  /\bPatient\s*ID\b/i,
+  /\bLab\s*No\b/i,
+];
+
+function isHeaderLine(line: string): boolean {
+  return HEADER_PATTERNS.some(p => p.test(line));
 }
 
 export function extractLabResultsFromText(text: string, profileGender?: 'male' | 'female'): PdfExtraction {
@@ -150,20 +173,26 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
   }
 
   const gender = profileGender || extraction.gender || 'male';
+  const patientAge = extraction.age;
   const foundKeys = new Set<string>();
 
   // Split text into lines for scanning
   const lines = text.split(/\n/);
 
   for (const line of lines) {
+    // CRITICAL: Skip header/patient info lines entirely
+    if (isHeaderLine(line)) continue;
+
     for (const mapping of PDF_LAB_MAPPINGS) {
       if (foundKeys.has(mapping.key)) continue;
       
       for (const pattern of mapping.patterns) {
         if (!pattern.test(line)) continue;
 
+        // Handle special ">2000" type values for cyclosporin etc.
+        const gtMatch = line.match(/>\s*(\d+\.?\d*)/);
+        
         // Try to extract a numeric value from the same line
-        // Match patterns like "7.89", "144.3", ">2000", "<5"
         const valuePatterns = [
           // Test name followed by value: "WBC  7.89"
           new RegExp(pattern.source + '\\s+[|\\s]*([<>]?\\d+\\.?\\d*)', 'i'),
@@ -175,15 +204,26 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
 
         let value: number | null = null;
         let rawText = line.trim();
+        let notes = '';
 
-        for (const vp of valuePatterns) {
-          const vm = line.match(vp);
-          if (vm) {
-            const raw = vm[1].replace(/[<>]/g, '');
-            const parsed = parseFloat(raw);
-            if (!isNaN(parsed) && parsed > 0) {
-              value = parsed;
-              break;
+        // Handle ">2000" specifically
+        if (gtMatch && mapping.key === 'cyclosporin') {
+          value = parseFloat(gtMatch[1]);
+          notes = '⚠️ أكثر من ' + gtMatch[1] + ' - يرجى المراجعة';
+        }
+
+        if (value === null) {
+          for (const vp of valuePatterns) {
+            const vm = line.match(vp);
+            if (vm) {
+              const raw = vm[1].replace(/[<>]/g, '');
+              const parsed = parseFloat(raw);
+              if (!isNaN(parsed) && parsed > 0) {
+                // VALIDATION: reject if value equals patient age
+                if (patientAge !== null && parsed === patientAge) continue;
+                value = parsed;
+                break;
+              }
             }
           }
         }
@@ -195,6 +235,8 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
             for (const n of numbers) {
               const parsed = parseFloat(n);
               if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
+                // VALIDATION: reject if value equals patient age
+                if (patientAge !== null && parsed === patientAge) continue;
                 value = parsed;
                 break;
               }
@@ -219,7 +261,7 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
             normalMax: max,
             status: getStatus(value, min, max),
             selected: true,
-            rawText,
+            rawText: notes || rawText,
           });
           foundKeys.add(mapping.key);
           break;

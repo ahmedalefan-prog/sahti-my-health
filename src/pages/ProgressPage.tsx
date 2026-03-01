@@ -1,7 +1,7 @@
 import { useStore } from '@/lib/store';
 import { LAB_TESTS } from '@/lib/constants';
 import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 import { useState, useMemo } from 'react';
 
 interface TestDef {
@@ -124,11 +124,30 @@ const ProgressPage = () => {
                     <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip labelFormatter={(l) => `التاريخ: ${l}`} formatter={(v: number) => [`${v} ${currentTest.unit}`, currentTest.name]} />
-                    <ReferenceLine y={currentTest.normalMax} stroke="hsl(var(--success))" strokeDasharray="5 5" label={{ value: 'الحد الأعلى', position: 'insideTopLeft', fontSize: 10 }} />
+                    <ReferenceLine y={currentTest.normalMax} stroke="hsl(var(--success))" strokeDasharray="5 5" />
                     {currentTest.normalMin > 0 && (
-                      <ReferenceLine y={currentTest.normalMin} stroke="hsl(var(--warning))" strokeDasharray="5 5" label={{ value: 'الحد الأدنى', position: 'insideBottomLeft', fontSize: 10 }} />
+                      <ReferenceLine y={currentTest.normalMin} stroke="hsl(var(--warning))" strokeDasharray="5 5" />
                     )}
-                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} />
+                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} name="قيمة التحليل" />
+                    <Legend
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="top"
+                      iconType="plainline"
+                      wrapperStyle={{
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        backgroundColor: 'hsla(var(--card), 0.95)',
+                        fontSize: '12px',
+                        lineHeight: '1.8',
+                      }}
+                      payload={[
+                        { value: 'قيمة التحليل', type: 'line' as const, color: 'hsl(var(--primary))' },
+                        { value: 'الحد الأعلى الطبيعي', type: 'line' as const, color: 'hsl(var(--success))' },
+                        ...(currentTest.normalMin > 0 ? [{ value: 'الحد الأدنى الطبيعي', type: 'line' as const, color: 'hsl(var(--warning))' }] : []),
+                      ] as any}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
