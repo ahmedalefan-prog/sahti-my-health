@@ -123,23 +123,19 @@ function getStatus(value: number, min: number, max: number): 'normal' | 'warning
   return 'danger';
 }
 
-// Header line patterns to skip (patient info lines that should never be parsed for values)
-const HEADER_PATTERNS = [
-  /\bSample\s*Code\b/i,
-  /\bPatient\s*Name\b/i,
-  /\bGender\s*\/?\s*Age\b/i,
-  /\bRef\.?\s*By\b/i,
-  /\bSample\s*In\b/i,
-  /\bSample\s*Out\b/i,
-  /\bReferred\s*By\b/i,
-  /\bDoctor\b/i,
-  /\bDate\s*of\s*Birth\b/i,
-  /\bPatient\s*ID\b/i,
-  /\bLab\s*No\b/i,
+// Header phrases — lines containing these are skipped entirely
+const HEADER_PHRASES = [
+  'Sample Code:',
+  'Patient Name:',
+  'Gender / Age:',
+  'Gender/Age:',
+  'Ref By:',
+  'Sample In:',
+  'Sample Out:',
 ];
 
 function isHeaderLine(line: string): boolean {
-  return HEADER_PATTERNS.some(p => p.test(line));
+  return HEADER_PHRASES.some(p => line.includes(p));
 }
 
 export function extractLabResultsFromText(text: string, profileGender?: 'male' | 'female'): PdfExtraction {
@@ -151,7 +147,7 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
     results: [],
   };
 
-  // Extract patient info
+  // Extract patient info from full text first
   const nameMatch = text.match(/Patient\s*Name\s*[:\s]+([^\n\r]+)/i);
   if (nameMatch) extraction.patientName = nameMatch[1].trim();
 
@@ -179,123 +175,94 @@ export function extractLabResultsFromText(text: string, profileGender?: 'male' |
   const patientAge = extraction.age;
   const foundKeys = new Set<string>();
 
-  // Split text into lines for scanning
+  // Remove header lines, then work with the cleaned text
   const lines = text.split(/\n/);
-
-  // Preprocess: split dual-column CBC lines into separate segments
-  // e.g. "WBC 7.89 4 - 11 10⁹/L HGB 9.4 11.5 - 15.5 g/dl" → two segments
-  const processedSegments: string[] = [];
+  const cleanedLines: string[] = [];
   for (const line of lines) {
-    if (isHeaderLine(line)) continue;
-    
-    // Try to detect dual-column lines: look for multiple test name patterns in same line
-    let splitDone = false;
-    for (const mapping of PDF_LAB_MAPPINGS) {
-      for (const pattern of mapping.patterns) {
-        const matches = [...line.matchAll(new RegExp(pattern.source, 'gi'))];
-        if (matches.length >= 1) {
-          // Check if there's ANOTHER test pattern after this one
-          const firstIdx = matches[0].index!;
-          const afterFirst = line.substring(firstIdx + matches[0][0].length);
-          for (const otherMapping of PDF_LAB_MAPPINGS) {
-            if (otherMapping.key === mapping.key) continue;
-            for (const op of otherMapping.patterns) {
-              const otherMatch = afterFirst.match(op);
-              if (otherMatch && otherMatch.index !== undefined) {
-                // Split the line at the second test name
-                const splitPos = firstIdx + matches[0][0].length + otherMatch.index;
-                processedSegments.push(line.substring(0, splitPos).trim());
-                processedSegments.push(line.substring(splitPos).trim());
-                splitDone = true;
-                break;
-              }
-            }
-            if (splitDone) break;
-          }
-        }
-        if (splitDone) break;
+    // Split long lines (from pdfjs joining) on double-spaces to get pseudo-lines
+    const parts = line.split(/\s{2,}/);
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (trimmed && !isHeaderLine(trimmed)) {
+        cleanedLines.push(trimmed);
       }
-      if (splitDone) break;
-    }
-    if (!splitDone) {
-      processedSegments.push(line.trim());
     }
   }
 
-  for (const segment of processedSegments) {
-    if (!segment || isHeaderLine(segment)) continue;
+  // Join everything back so we can search across boundaries
+  const cleanedText = cleanedLines.join('  ');
 
-    for (const mapping of PDF_LAB_MAPPINGS) {
-      if (foundKeys.has(mapping.key)) continue;
-      
-      for (const pattern of mapping.patterns) {
-        if (!pattern.test(segment)) continue;
+  // For each mapping, search the cleaned text
+  for (const mapping of PDF_LAB_MAPPINGS) {
+    if (foundKeys.has(mapping.key)) continue;
 
-        // Handle special ">2000" type values for cyclosporin etc.
-        const gtMatch = segment.match(/>\s*(\d+\.?\d*)/);
-        
-        let value: number | null = null;
-        let rawText = segment.trim();
-        let notes = '';
+    for (const pattern of mapping.patterns) {
+      const match = cleanedText.match(pattern);
+      if (!match || match.index === undefined) continue;
 
-        // Handle ">2000" specifically for cyclosporin
-        if (gtMatch && mapping.key === 'cyclosporin') {
+      const afterName = cleanedText.substring(match.index + match[0].length);
+      let value: number | null = null;
+      let notes = '';
+
+      // Special: handle ">2000" for cyclosporin
+      if (mapping.key === 'cyclosporin') {
+        const gtMatch = afterName.match(/^\s*[:\s]*>\s*(\d+\.?\d*)/);
+        if (gtMatch) {
           value = parseFloat(gtMatch[1]);
           notes = '⚠️ أكثر من ' + gtMatch[1] + ' - يرجى المراجعة';
         }
+      }
 
-        if (value === null) {
-          // Primary: find the number immediately after the test name
-          const patternMatch = segment.match(new RegExp(pattern.source + '[\\s|:]+([<>]?\\d+\\.?\\d*)', 'i'));
-          if (patternMatch) {
-            const parsed = parseFloat(patternMatch[1].replace(/[<>]/g, ''));
-            if (!isNaN(parsed) && parsed > 0 && (patientAge === null || parsed !== patientAge)) {
+      // Primary: first number right after the test name
+      if (value === null) {
+        // Take a small window after the test name to avoid grabbing numbers from other tests
+        const window = afterName.substring(0, 60);
+        const numMatches = window.match(/[:\s]+([<>]?\d+\.?\d*)/);
+        if (numMatches) {
+          const parsed = parseFloat(numMatches[1].replace(/[<>]/g, ''));
+          if (!isNaN(parsed) && parsed > 0 && (patientAge === null || parsed !== patientAge)) {
+            value = parsed;
+          }
+        }
+      }
+
+      // Fallback: any number in a wider window
+      if (value === null) {
+        const window = afterName.substring(0, 80);
+        const allNums = window.match(/\b(\d+\.?\d*)\b/g);
+        if (allNums) {
+          for (const n of allNums) {
+            const parsed = parseFloat(n);
+            if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
+              if (patientAge !== null && parsed === patientAge) continue;
               value = parsed;
+              break;
             }
           }
         }
+      }
 
-        if (value === null) {
-          // Secondary: find first reasonable number after the test name position
-          const nameMatch = segment.match(pattern);
-          if (nameMatch && nameMatch.index !== undefined) {
-            const afterName = segment.substring(nameMatch.index + nameMatch[0].length);
-            const numbers = afterName.match(/\b(\d+\.?\d*)\b/g);
-            if (numbers) {
-              for (const n of numbers) {
-                const parsed = parseFloat(n);
-                if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
-                  if (patientAge !== null && parsed === patientAge) continue;
-                  value = parsed;
-                  break;
-                }
-              }
-            }
-          }
+      if (value !== null) {
+        let min = mapping.normalMin;
+        let max = mapping.normalMax;
+        if (mapping.genderSpecific) {
+          min = mapping.genderSpecific[gender].min;
+          max = mapping.genderSpecific[gender].max;
         }
 
-        if (value !== null) {
-          let min = mapping.normalMin;
-          let max = mapping.normalMax;
-          if (mapping.genderSpecific) {
-            min = mapping.genderSpecific[gender].min;
-            max = mapping.genderSpecific[gender].max;
-          }
-
-          extraction.results.push({
-            key: mapping.key,
-            arabicName: mapping.arabicName,
-            value,
-            unit: mapping.unit,
-            normalMin: min,
-            normalMax: max,
-            status: getStatus(value, min, max),
-            selected: true,
-            rawText: notes || rawText,
-          });
-          foundKeys.add(mapping.key);
-          break;
-        }
+        extraction.results.push({
+          key: mapping.key,
+          arabicName: mapping.arabicName,
+          value,
+          unit: mapping.unit,
+          normalMin: min,
+          normalMax: max,
+          status: getStatus(value, min, max),
+          selected: true,
+          rawText: notes || match[0],
+        });
+        foundKeys.add(mapping.key);
+        break;
       }
     }
   }
