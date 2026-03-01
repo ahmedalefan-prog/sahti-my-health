@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore, generateId, getTodayStr, type JournalEntry } from '@/lib/store';
 import { MOODS } from '@/lib/constants';
+import { useLanguage } from '@/lib/i18n';
 import { Search, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const JournalPage = () => {
   const { journalEntries, addJournalEntry, updateJournalEntry } = useStore();
+  const { t } = useLanguage();
   const today = getTodayStr();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -14,7 +16,6 @@ const JournalPage = () => {
   const [mood, setMood] = useState(todayEntry?.mood || 0);
   const [saved, setSaved] = useState(false);
 
-  // Sync state when todayEntry changes (after save)
   useEffect(() => {
     if (todayEntry) {
       setNotes(todayEntry.notes);
@@ -30,7 +31,7 @@ const JournalPage = () => {
       addJournalEntry({ id: generateId(), date: today, notes: notes.trim(), mood });
     }
     setSaved(true);
-    toast.success('تم حفظ يومياتك بنجاح ✅');
+    toast.success(t('jour.savedSuccess'));
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -42,11 +43,10 @@ const JournalPage = () => {
 
   return (
     <div className="px-4 pt-6 pb-4 animate-fade-in">
-      <h1 className="text-2xl font-bold mb-6">📔 يومياتي</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('jour.title')}</h1>
 
-      {/* Today's Entry */}
       <div className="medical-card-elevated mb-6">
-        <h3 className="font-bold mb-3">كيف حالك اليوم؟</h3>
+        <h3 className="font-bold mb-3">{t('jour.howAreYou')}</h3>
         <div className="flex justify-around mb-4">
           {MOODS.map(m => (
             <button key={m.value} onClick={() => setMood(m.value)}
@@ -54,32 +54,30 @@ const JournalPage = () => {
                 mood === m.value ? 'bg-primary/10 scale-110' : 'opacity-60'
               }`}>
               <span className="text-3xl">{m.emoji}</span>
-              <span className="text-xs font-medium">{m.label}</span>
+              <span className="text-xs font-medium">{t('mood.' + m.value)}</span>
             </button>
           ))}
         </div>
         <textarea value={notes} onChange={e => setNotes(e.target.value)}
           className="w-full bg-secondary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary resize-none h-28"
-          placeholder="اكتب ملاحظاتك عن يومك..." />
+          placeholder={t('jour.writePlaceholder')} />
         <button onClick={handleSave} disabled={!mood && !notes.trim()}
           className={`w-full font-bold py-3 rounded-xl mt-3 touch-target disabled:opacity-40 flex items-center justify-center gap-2 transition-all ${
             saved ? 'bg-success text-white' : 'gradient-primary text-primary-foreground'
           }`}>
-          {saved ? <><Check size={20} /> تم الحفظ</> : 'حفظ'}
+          {saved ? <><Check size={20} /> {t('jour.saved')}</> : t('save')}
         </button>
       </div>
 
-      {/* Search */}
       {journalEntries.length > 0 && (
         <div className="relative mb-4">
-          <Search size={18} className="absolute right-3 top-3.5 text-muted-foreground" />
+          <Search size={18} className="absolute start-3 top-3.5 text-muted-foreground" />
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-secondary rounded-xl px-4 py-3 pr-10 outline-none focus:ring-2 focus:ring-primary"
-            placeholder="ابحث في يومياتك..." />
+            className="w-full bg-secondary rounded-xl px-4 py-3 ps-10 outline-none focus:ring-2 focus:ring-primary"
+            placeholder={t('jour.searchPlaceholder')} />
         </div>
       )}
 
-      {/* Past Entries */}
       <div className="space-y-3">
         {filteredEntries.filter(e => e.date !== today).map(entry => {
           const moodInfo = MOODS.find(m => m.value === entry.mood);

@@ -1,17 +1,19 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Pill, FlaskConical, UtensilsCrossed, User } from 'lucide-react';
-
-const tabs = [
-  { path: '/', icon: Home, label: 'الرئيسية' },
-  { path: '/medications', icon: Pill, label: 'أدويتي' },
-  { path: '/lab-results', icon: FlaskConical, label: 'تحاليلي' },
-  { path: '/nutrition', icon: UtensilsCrossed, label: 'تغذيتي' },
-  { path: '/profile', icon: User, label: 'ملفي' },
-];
+import { useLanguage } from '@/lib/i18n';
 
 const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const tabs = [
+    { path: '/', icon: Home, labelKey: 'nav.home' },
+    { path: '/medications', icon: Pill, labelKey: 'nav.medications' },
+    { path: '/lab-results', icon: FlaskConical, labelKey: 'nav.labs' },
+    { path: '/nutrition', icon: UtensilsCrossed, labelKey: 'nav.nutrition' },
+    { path: '/profile', icon: User, labelKey: 'nav.profile' },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,14 +29,12 @@ const Layout = () => {
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
                 className={`flex flex-col items-center gap-1 touch-target p-2 rounded-xl transition-colors ${
-                  isActive
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
+                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
                 <span className={`text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
               </button>
             );
