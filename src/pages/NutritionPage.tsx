@@ -4,6 +4,10 @@ import { FOOD_DATABASE, rateFoodForConditions, type FoodItem } from '@/lib/const
 import { useLanguage } from '@/lib/i18n';
 import { Search, Plus, X, Trash2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import WaterTracker from '@/components/nutrition/WaterTracker';
+import WeeklyChart from '@/components/nutrition/WeeklyChart';
+import SmartRecommendations from '@/components/nutrition/SmartRecommendations';
+import BarcodeScanner from '@/components/nutrition/BarcodeScanner';
 
 const NutritionPage = () => {
   const { profile, foodLog, addFoodLogEntry, removeFoodLogEntry, customFoods, addCustomFood } = useStore();
@@ -68,6 +72,7 @@ const NutritionPage = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t('nut.title')}</h1>
         <div className="flex gap-2">
+          <BarcodeScanner selectedMeal={selectedMeal} />
           <button onClick={() => navigate('/meal-plan')} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center touch-target">
             <Calendar size={20} className="text-primary" />
           </button>
@@ -77,6 +82,7 @@ const NutritionPage = () => {
         </div>
       </div>
 
+      {/* Today Summary */}
       <div className="medical-card-elevated mb-4">
         <h3 className="font-bold mb-3">{t('nut.todaySummary')}</h3>
         <div className="mb-3">
@@ -105,6 +111,16 @@ const NutritionPage = () => {
         </div>
       </div>
 
+      {/* Water Tracker */}
+      <WaterTracker />
+
+      {/* Weekly Chart */}
+      <WeeklyChart />
+
+      {/* Smart Recommendations */}
+      <SmartRecommendations />
+
+      {/* Meal Tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto">
         {MEALS.map(m => {
           const mealItems = todayLog.filter(f => f.meal === m.value);
@@ -119,6 +135,7 @@ const NutritionPage = () => {
         })}
       </div>
 
+      {/* Meal Items */}
       <div className="space-y-2 mb-4">
         {todayLog.filter(f => f.meal === selectedMeal).map(entry => (
           <div key={entry.id} className="medical-card flex items-center justify-between">
@@ -144,6 +161,7 @@ const NutritionPage = () => {
         )}
       </div>
 
+      {/* Search Modal */}
       {showSearch && (
         <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end">
           <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 max-h-[80vh] flex flex-col animate-slide-up">
