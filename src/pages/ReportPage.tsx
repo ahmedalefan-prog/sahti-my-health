@@ -6,6 +6,14 @@ import { toast } from 'sonner';
 import { useState, useRef, useMemo } from 'react';
 import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
 
+const formatBloodType = (bt: string) => {
+  if (!bt) return bt;
+  if (bt.length >= 2 && (bt[0] === '+' || bt[0] === '-')) {
+    return bt.slice(1) + bt[0];
+  }
+  return bt;
+};
+
 type ReportPeriod = '1week' | '1month' | '3months' | '6months' | 'custom';
 
 function getDateRange(period: ReportPeriod, customFrom: string, customTo: string): { from: string; to: string } {
@@ -49,7 +57,7 @@ const ReportPage = () => {
 
   if (!profile) return <div className="px-4 pt-6"><p className="text-muted-foreground">{t('rep.setupProfile')}</p></div>;
 
-  const conditionLabels = profile.conditions.map(c => t('condition.' + c));
+  const conditionLabels = profile.conditions;
   const getMedAdherence = (medId: string) => {
     const logs = medicationLogs.filter(l => l.medicationId === medId && l.date >= dateRange.from && l.date <= dateRange.to);
     return logs.length === 0 ? 0 : Math.round((logs.filter(l => l.status === 'taken').length / logs.length) * 100);
@@ -213,7 +221,7 @@ const ReportPage = () => {
                 <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfGender')}:</td><td>{profile.gender === 'male' ? t('male') : t('female')}</td></tr>
                 <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfWeightHeight')}:</td><td>{profile.weight} {t('kg')} / {profile.height} {t('cm')}</td></tr>
                 <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfBMI')}:</td><td>{profile.bmi}</td></tr>
-                <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfBloodType')}:</td><td>{profile.bloodType}</td></tr>
+                <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfBloodType')}:</td><td>{formatBloodType(profile.bloodType)}</td></tr>
                 <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfCaloriesNeeded')}:</td><td>{profile.dailyCalories} {t('calPerDay')}</td></tr>
                 {profile.doctorName && <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfDoctor')}:</td><td>{profile.doctorName}</td></tr>}
                 {conditionLabels.length > 0 && <tr><td style={{ padding: '3px 0', fontWeight: 'bold' }}>{t('rep.pdfConditions')}:</td><td>{conditionLabels.join('، ')}</td></tr>}
@@ -272,6 +280,60 @@ const ReportPage = () => {
             </div>
           )}
 
+          {selectedContent.includes('labComparison') && (() => {
+            const comparisons: { testName: string; oldVal: number; newVal: number; oldDate: string; newDate: string; unit: string; change: number; trend: string }[] = [];
+            labsByTest.forEach((results, testKey) => {
+              if (results.length < 2) return;
+              const oldest = results[0];
+              const newest = results[results.length - 1];
+              const change = newest.value - oldest.value;
+              const pctChange = oldest.value !== 0 ? Math.abs(change / oldest.value) * 100 : 100;
+              const def = allTestDefs.get(testKey);
+              let trend = '🟡 مستقر';
+              if (pctChange >= 5 && def) {
+                const midNormal = (def.normalMin + def.normalMax) / 2;
+                const oldDist = Math.abs(oldest.value - midNormal);
+                const newDist = Math.abs(newest.value - midNormal);
+                trend = newDist < oldDist ? '🟢 تحسن' : '🔴 تدهور';
+              } else if (pctChange >= 5) {
+                trend = change > 0 ? '🔴 تدهور' : '🟢 تحسن';
+              }
+              comparisons.push({ testName: tLabName(testKey, newest.testName), oldVal: oldest.value, newVal: newest.value, oldDate: oldest.date, newDate: newest.date, unit: newest.unit, change, trend });
+            });
+            if (comparisons.length === 0) return null;
+            const improved = comparisons.filter(c => c.trend.includes('تحسن')).length;
+            const worsened = comparisons.filter(c => c.trend.includes('تدهور')).length;
+            const stable = comparisons.filter(c => c.trend.includes('مستقر')).length;
+            return (
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '16px', color: '#2563EB', margin: '0 0 10px' }}>مقارنة التحاليل (قبل وبعد)</h2>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ backgroundColor: '#2563EB', color: '#fff' }}>
+                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>التحليل</th>
+                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>القيمة القديمة</th>
+                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>القيمة الجديدة</th>
+                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>التغيير</th>
+                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>الحالة</th>
+                  </tr></thead>
+                  <tbody>
+                    {comparisons.map((c, i) => (
+                      <tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#f9fafb' : '#fff' }}>
+                        <td style={{ padding: '5px 10px', borderBottom: '1px solid #e5e7eb' }}>{c.testName}</td>
+                        <td style={{ padding: '5px 10px', borderBottom: '1px solid #e5e7eb' }}>{c.oldVal} {c.unit}</td>
+                        <td style={{ padding: '5px 10px', borderBottom: '1px solid #e5e7eb' }}>{c.newVal} {c.unit}</td>
+                        <td style={{ padding: '5px 10px', borderBottom: '1px solid #e5e7eb' }}>{c.change > 0 ? '+' : ''}{c.change.toFixed(1)}</td>
+                        <td style={{ padding: '5px 10px', borderBottom: '1px solid #e5e7eb' }}>{c.trend}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p style={{ fontSize: '12px', marginTop: '8px', color: '#555' }}>
+                  تحسّن في {improved} تحليل، تدهور في {worsened}، مستقر {stable}
+                </p>
+              </div>
+            );
+          })()}
+
           {selectedContent.includes('nutrition') && (
             <div style={{ marginBottom: '24px', backgroundColor: '#f0fdf4', padding: '16px', borderRadius: '10px' }}>
               <h2 style={{ fontSize: '16px', color: '#16A34A', margin: '0 0 8px' }}>{t('rep.pdfNutrition')}</h2>
@@ -284,10 +346,23 @@ const ReportPage = () => {
             </div>
           )}
 
-          {selectedContent.includes('sideEffects') && filteredSideEffects.length > 0 && (
+
+          {selectedContent.includes('journal') && filteredJournal.length > 0 && (
             <div style={{ marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '16px', color: '#2563EB', margin: '0 0 10px' }}>{t('rep.sideEffects')}</h2>
-              {(() => {
+              <h2 style={{ fontSize: '16px', color: '#2563EB', margin: '0 0 10px' }}>{t('rep.journalNotes')}</h2>
+              {filteredJournal.slice(0, 15).map(j => {
+                const moodInfo = MOODS.find(m => m.value === j.mood);
+                return <p key={j.id} style={{ margin: '3px 0', fontSize: '12px' }}>{j.date} {moodInfo?.emoji} {t('mood.' + j.mood)} - {j.notes || t('rep.pdfNoNotes')}</p>;
+              })}
+            </div>
+          )}
+
+          {selectedContent.includes('sideEffects') && (
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '16px', color: '#2563EB', margin: '0 0 10px' }}>الأعراض الجانبية المسجّلة</h2>
+              {filteredSideEffects.length === 0 ? (
+                <p style={{ fontSize: '12px', color: '#666' }}>لم تُسجَّل أعراض جانبية خلال هذه الفترة</p>
+              ) : (() => {
                 const byMed = new Map<string, typeof filteredSideEffects>();
                 filteredSideEffects.forEach(se => { const medName = medications.find(m => m.id === se.medicationId)?.name || '-'; if (!byMed.has(medName)) byMed.set(medName, []); byMed.get(medName)!.push(se); });
                 return Array.from(byMed.entries()).map(([medName, effects]) => (
@@ -301,16 +376,6 @@ const ReportPage = () => {
                   </div>
                 ));
               })()}
-            </div>
-          )}
-
-          {selectedContent.includes('journal') && filteredJournal.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '16px', color: '#2563EB', margin: '0 0 10px' }}>{t('rep.journalNotes')}</h2>
-              {filteredJournal.slice(0, 15).map(j => {
-                const moodInfo = MOODS.find(m => m.value === j.mood);
-                return <p key={j.id} style={{ margin: '3px 0', fontSize: '12px' }}>{j.date} {moodInfo?.emoji} {t('mood.' + j.mood)} - {j.notes || t('rep.pdfNoNotes')}</p>;
-              })}
             </div>
           )}
 

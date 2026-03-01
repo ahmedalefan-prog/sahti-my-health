@@ -161,7 +161,7 @@ const ProfilePage = () => {
         </div>
         <div className="medical-card flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center"><Droplets size={20} className="text-destructive" /></div>
-          <div><p className="text-xs text-muted-foreground">{t('prof.bloodType')}</p><p className="font-bold">{profile.bloodType}</p></div>
+          <div><p className="text-xs text-muted-foreground">{t('prof.bloodType')}</p><p className="font-bold">{(() => { const bt = profile.bloodType; if (bt && bt.length >= 2 && (bt[0] === '+' || bt[0] === '-')) return bt.slice(1) + bt[0]; return bt; })()}</p></div>
         </div>
       </div>
 
