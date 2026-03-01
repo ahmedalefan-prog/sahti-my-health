@@ -96,7 +96,8 @@ ${medSummary}
   }, [profile, labResults, medications]);
 
   const callOpenAI = async (userText: string, pdfBase64?: string) => {
-    if (!apiKey) return null;
+    const key = localStorage.getItem('sahti_openai_key');
+    if (!key) return null;
 
     const msgs: any[] = [
       { role: 'system', content: pdfBase64 ? 'You are a medical lab report extraction assistant.' : getSystemPrompt() },
@@ -114,27 +115,34 @@ ${medSummary}
       msgs.push({ role: 'user', content: userText });
     }
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 1500,
-        temperature: 0.7,
-        messages: msgs,
-      }),
-    });
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + key,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          max_tokens: 1500,
+          temperature: 0.7,
+          messages: msgs,
+        }),
+      });
 
-    if (!res.ok) {
-      if (res.status === 429) throw new Error('RATE_LIMIT');
-      throw new Error('API_ERROR');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        console.error('OpenAI API Error:', res.status, errorData);
+        if (res.status === 429) throw new Error('RATE_LIMIT');
+        throw new Error(errorData?.error?.message || `API Error ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error('Full OpenAI error:', error);
+      throw error;
     }
-
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || null;
   };
 
   const sendMessage = async (text: string) => {
@@ -150,9 +158,13 @@ ${medSummary}
         setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: response, timestamp: Date.now() }]);
       }
     } catch (err: any) {
-      const errorMsg = err.message === 'RATE_LIMIT'
-        ? (lang === 'ar' ? 'تجاوزت الحد مؤقتاً، انتظر دقيقة ⏳' : 'Rate limit reached, wait a minute ⏳')
-        : (lang === 'ar' ? 'حدث خطأ، تحقق من المفتاح وحاول مجدداً ❌' : 'Error occurred, check your key and try again ❌');
+      console.error('sendMessage error:', err);
+      let errorMsg: string;
+      if (err.message === 'RATE_LIMIT') {
+        errorMsg = lang === 'ar' ? 'تجاوزت الحد مؤقتاً، انتظر دقيقة ⏳' : 'Rate limit reached, wait a minute ⏳';
+      } else {
+        errorMsg = `❌ خطأ: ${err.message}`;
+      }
       setMessages(prev => [...prev, { id: generateId(), role: 'assistant', text: errorMsg, timestamp: Date.now() }]);
     } finally {
       setLoading(false);
