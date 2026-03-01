@@ -17,6 +17,7 @@ import JournalPage from "@/pages/JournalPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ReportPage from "@/pages/ReportPage";
 import MealPlanPage from "@/pages/MealPlanPage";
+import AssistantPage from "@/pages/AssistantPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/" element={<HomePage />} />
         <Route path="/medications" element={<MedicationsPage />} />
+        <Route path="/assistant" element={<AssistantPage />} />
         <Route path="/lab-results" element={<LabResultsPage />} />
         <Route path="/nutrition" element={<NutritionPage />} />
         <Route path="/profile" element={<ProfilePage />} />

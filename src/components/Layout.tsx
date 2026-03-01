@@ -1,7 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Pill, FlaskConical, UtensilsCrossed, User } from 'lucide-react';
+import { Home, Pill, FlaskConical, User } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
-import AiAssistant from '@/components/AiAssistant';
 
 const Layout = () => {
   const location = useLocation();
@@ -11,8 +10,8 @@ const Layout = () => {
   const tabs = [
     { path: '/', icon: Home, labelKey: 'nav.home' },
     { path: '/medications', icon: Pill, labelKey: 'nav.medications' },
+    { path: '/assistant', icon: null, labelKey: 'nav.assistant', emoji: '🧠' },
     { path: '/lab-results', icon: FlaskConical, labelKey: 'nav.labs' },
-    { path: '/nutrition', icon: UtensilsCrossed, labelKey: 'nav.nutrition' },
     { path: '/profile', icon: User, labelKey: 'nav.profile' },
   ];
 
@@ -21,7 +20,6 @@ const Layout = () => {
       <div className="pb-safe max-w-lg mx-auto">
         <Outlet />
       </div>
-      <AiAssistant />
       <nav className="fixed bottom-0 inset-x-0 bg-card border-t border-border z-50">
         <div className="max-w-lg mx-auto flex justify-around items-center h-[70px] px-2">
           {tabs.map(tab => {
@@ -34,7 +32,11 @@ const Layout = () => {
                   isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                {tab.emoji ? (
+                  <span className="text-[22px] leading-none">{tab.emoji}</span>
+                ) : (
+                  tab.icon && <tab.icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                )}
                 <span className={`text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>
                   {t(tab.labelKey)}
                 </span>
