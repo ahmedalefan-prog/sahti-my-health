@@ -166,13 +166,3 @@
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
-/* AI FAB animations */
-@keyframes ai-fab-in {
-  0% { opacity: 0; transform: translateY(40px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes ai-fab-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}

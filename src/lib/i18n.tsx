@@ -30,7 +30,7 @@ const LAB_TEST_EN: Record<string, string> = {
 const translations: Record<Lang, Record<string, string>> = {
   ar: {
     'nav.home': 'الرئيسية', 'nav.medications': 'أدويتي', 'nav.labs': 'تحاليلي',
-    'nav.nutrition': 'تغذيتي', 'nav.profile': 'ملفي',
+    'nav.nutrition': 'تغذيتي', 'nav.profile': 'ملفي', 'nav.assistant': 'مساعدي',
     'save': 'حفظ', 'cancel': 'إلغاء', 'add': 'إضافة', 'delete': 'حذف', 'edit': 'تعديل',
     'back': 'رجوع', 'next': 'التالي', 'notes': 'ملاحظات', 'of': 'من',
     'calories': 'سعرة', 'year': 'سنة', 'male': 'ذكر', 'female': 'أنثى',
@@ -185,7 +185,7 @@ const translations: Record<Lang, Record<string, string>> = {
   },
   en: {
     'nav.home': 'Home', 'nav.medications': 'My Medications', 'nav.labs': 'My Labs',
-    'nav.nutrition': 'Nutrition', 'nav.profile': 'Profile',
+    'nav.nutrition': 'Nutrition', 'nav.profile': 'Profile', 'nav.assistant': 'Assistant',
     'save': 'Save', 'cancel': 'Cancel', 'add': 'Add', 'delete': 'Delete', 'edit': 'Edit',
     'back': 'Back', 'next': 'Next', 'notes': 'Notes', 'of': 'of',
     'calories': 'cal', 'year': 'yr', 'male': 'Male', 'female': 'Female',

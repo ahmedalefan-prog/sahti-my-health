@@ -103,14 +103,12 @@ const LabResultsPage = () => {
         <h1 className="text-2xl font-bold">{t('lab.title')}</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => {
-            const key = localStorage.getItem('sahti_gemini_key');
+            const key = localStorage.getItem('sahti_openai_key');
             if (!key) {
-              toast.error(t('lab.aiImport') + ' - ' + (lang === 'ar' ? 'أضف مفتاح Gemini في الإعدادات' : 'Add Gemini key in Settings'));
+              toast.error(lang === 'ar' ? 'أضف مفتاح OpenAI في الإعدادات أولاً' : 'Add OpenAI key in Settings first');
               return;
             }
-            // Trigger AI assistant PDF import
-            const btn = document.querySelector('[data-ai-open]') as HTMLButtonElement;
-            if (btn) btn.click();
+            window.location.href = '/assistant';
           }} className="h-10 px-3 rounded-xl bg-primary/10 flex items-center gap-1.5 touch-target text-sm font-semibold text-primary">
             <Brain size={16} /><span>{t('lab.aiImport')}</span>
           </button>
