@@ -70,7 +70,9 @@ function isMedDueToday(med: Medication): boolean {
   }
 }
 
-const MedicationsPage = () => {
+import React from 'react';
+
+const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
   const { medications, medicationLogs, addMedication, removeMedication, addMedicationLog } = useStore();
   const { t, lang } = useLanguage();
   const [showForm, setShowForm] = useState(false);
@@ -405,6 +407,8 @@ const MedicationsPage = () => {
       )}
     </div>
   );
-};
+});
+
+MedicationsPage.displayName = 'MedicationsPage';
 
 export default MedicationsPage;

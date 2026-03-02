@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { StoreProvider, useStore } from "@/lib/store";
+import { useMedNotifications } from "@/hooks/use-med-notifications";
 import { LanguageProvider } from "@/lib/i18n";
 import Layout from "@/components/Layout";
 import Onboarding from "@/pages/Onboarding";
@@ -30,7 +31,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AppRoutes = () => {
   const { profile } = useStore();
-
+  useMedNotifications();
   return (
     <Routes>
       <Route path="/onboarding" element={profile ? <Navigate to="/" replace /> : <Onboarding />} />
