@@ -207,6 +207,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'nut.remainingCalories': 'السعرات المتبقية',
     'nut.tapForSuggestions': 'اضغط "اقترح لي" للحصول على توصيات مخصصة',
     'nut.barcodeTitle': '📷 مسح باركود المنتج',
+    'pwa.install': 'تثبيت تطبيق صحتي',
+    'pwa.installDesc': 'ثبّت التطبيق على جوالك للوصول السريع',
+    'pwa.installBtn': 'تثبيت',
   },
   en: {
     'nav.home': 'Home', 'nav.medications': 'My Medications', 'nav.labs': 'My Labs',
@@ -387,6 +390,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'nut.remainingCalories': 'Remaining calories',
     'nut.tapForSuggestions': 'Tap "Suggest" for personalized recommendations',
     'nut.barcodeTitle': '📷 Scan Product Barcode',
+    'pwa.install': 'Install Sahti App',
+    'pwa.installDesc': 'Install the app for quick access',
+    'pwa.installBtn': 'Install',
   }
 };
 

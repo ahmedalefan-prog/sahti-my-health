@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Pill, FlaskConical, User, UtensilsCrossed } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
+import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 
 const Layout = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const Layout = () => {
       <div className="pb-safe max-w-lg mx-auto">
         <Outlet />
       </div>
+      <PwaInstallPrompt />
       <nav className="fixed bottom-0 inset-x-0 bg-card border-t border-border z-50">
         <div className="max-w-lg mx-auto flex justify-around items-center h-[70px] px-1">
           {tabs.map(tab => {
