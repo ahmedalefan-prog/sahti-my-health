@@ -1,13 +1,15 @@
 import { useStore } from '@/lib/store';
 import { useLanguage } from '@/lib/i18n';
+import { useAuth } from '@/hooks/use-auth';
 import { Switch } from '@/components/ui/switch';
-import { Moon, Bell, Clock, Trash2, Settings, Languages } from 'lucide-react';
+import { Moon, Bell, Clock, Trash2, Settings, Languages, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
 const SettingsPage = () => {
   const { settings, updateSettings, resetAllData } = useStore();
   const { t, lang, labLang, setLang, setLabLang } = useLanguage();
+  const { signOut } = useAuth();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleNotificationToggle = async (enabled: boolean) => {
@@ -145,7 +147,14 @@ const SettingsPage = () => {
         )}
       </div>
 
-      <div className="text-center text-sm text-muted-foreground mt-8">
+      {/* Logout */}
+      <button onClick={signOut}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/10 text-destructive font-semibold mb-4">
+        <LogOut size={18} />
+        {t('auth.logout')}
+      </button>
+
+      <div className="text-center text-sm text-muted-foreground mt-4">
         <p>{t('set.appInfo')}</p>
         <p>{t('set.appDesc')}</p>
       </div>

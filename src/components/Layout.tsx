@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Pill, FlaskConical, User, UtensilsCrossed } from 'lucide-react';
+import { Home, Pill, FlaskConical, User, UtensilsCrossed, LogOut } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
+import { useAuth } from '@/hooks/use-auth';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 
 const Layout = () => {
