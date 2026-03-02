@@ -1,39 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/lib/i18n';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 import { Droplets, Plus, Minus } from 'lucide-react';
 import { getTodayStr } from '@/lib/store';
 
-const WATER_STORAGE_KEY = 'sahti_water_log';
 const GOAL = 8;
-
-interface WaterLog {
-  [date: string]: number;
-}
 
 const WaterTracker = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const today = getTodayStr();
-
-  const [waterLog, setWaterLog] = useState<WaterLog>(() => {
-    try {
-      const raw = localStorage.getItem(WATER_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
-  });
-
-  const glasses = waterLog[today] || 0;
+  const [glasses, setGlasses] = useState(0);
 
   useEffect(() => {
-    localStorage.setItem(WATER_STORAGE_KEY, JSON.stringify(waterLog));
-  }, [waterLog]);
+    if (!user) return;
+    supabase.from('water_log').select('glasses').eq('user_id', user.id).eq('date', today).single()
+      .then(({ data }) => { if (data) setGlasses(data.glasses); });
+  }, [user, today]);
 
-  const addGlass = () => {
-    setWaterLog(prev => ({ ...prev, [today]: Math.min((prev[today] || 0) + 1, 15) }));
-  };
+  const updateGlasses = useCallback(async (newVal: number) => {
+    setGlasses(newVal);
+    if (!user) return;
+    await supabase.from('water_log').upsert(
+      { user_id: user.id, date: today, glasses: newVal },
+      { onConflict: 'user_id,date' }
+    );
+  }, [user, today]);
 
-  const removeGlass = () => {
-    setWaterLog(prev => ({ ...prev, [today]: Math.max((prev[today] || 0) - 1, 0) }));
-  };
+  const addGlass = () => updateGlasses(Math.min(glasses + 1, 15));
+  const removeGlass = () => updateGlasses(Math.max(glasses - 1, 0));
 
   const pct = Math.min(100, (glasses / GOAL) * 100);
 
