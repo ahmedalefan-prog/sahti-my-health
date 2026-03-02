@@ -5,6 +5,7 @@ import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
 import { useLanguage } from '@/lib/i18n';
 import { Plus, X, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Pencil, Trash2, FileUp, Calendar, Brain } from 'lucide-react';
 import PdfImportModal from '@/components/PdfImportModal';
+import AiLabImportModal from '@/components/AiLabImportModal';
 import { toast } from 'sonner';
 
 type ViewMode = 'byTest' | 'byDate';
@@ -18,6 +19,7 @@ const LabResultsPage = () => {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [editingResult, setEditingResult] = useState<LabResult | null>(null);
   const [showPdfImport, setShowPdfImport] = useState(false);
+  const [showAiImport, setShowAiImport] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('byDate');
 
   const allTests = useMemo(() => {
@@ -102,14 +104,7 @@ const LabResultsPage = () => {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">{t('lab.title')}</h1>
         <div className="flex items-center gap-2">
-          <button onClick={() => {
-            const key = localStorage.getItem('sahti_openai_key');
-            if (!key) {
-              toast.error(lang === 'ar' ? 'أضف مفتاح OpenAI في الإعدادات أولاً' : 'Add OpenAI key in Settings first');
-              return;
-            }
-            window.location.href = '/assistant';
-          }} className="h-10 px-3 rounded-xl bg-primary/10 flex items-center gap-1.5 touch-target text-sm font-semibold text-primary">
+          <button onClick={() => setShowAiImport(true)} className="h-10 px-3 rounded-xl bg-primary/10 flex items-center gap-1.5 touch-target text-sm font-semibold text-primary">
             <Brain size={16} /><span>{t('lab.aiImport')}</span>
           </button>
           <button onClick={() => setShowPdfImport(true)} className="h-10 px-3 rounded-xl bg-secondary flex items-center gap-1.5 touch-target text-sm font-semibold">
@@ -135,6 +130,7 @@ const LabResultsPage = () => {
       )}
 
       <PdfImportModal open={showPdfImport} onClose={() => setShowPdfImport(false)} />
+      <AiLabImportModal open={showAiImport} onClose={() => setShowAiImport(false)} />
 
       {showForm && (
         <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end">
