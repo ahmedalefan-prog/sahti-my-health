@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useStore, calculateBMI, calculateCalories, type Profile } from '@/lib/store';
 import { CONDITIONS, BLOOD_TYPES } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Edit2, Phone, Stethoscope, Ruler, Weight, Droplets, Activity, X, Check, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ProfilePage = () => {
+const ProfilePage = React.forwardRef<HTMLDivElement>((_, ref) => {
   const { profile, setProfile } = useStore();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -241,6 +241,8 @@ const ProfilePage = () => {
       </button>
     </div>
   );
-};
+});
+
+ProfilePage.displayName = 'ProfilePage';
 
 export default ProfilePage;
