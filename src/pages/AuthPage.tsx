@@ -13,6 +13,7 @@ const AuthPage = () => {
   const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +33,12 @@ const AuthPage = () => {
 
     if (!password || password.length < 6) {
       toast.error(t('auth.passwordMin'));
+      setLoading(false);
+      return;
+    }
+
+    if (mode === 'signup' && password !== confirmPassword) {
+      toast.error(t('auth.passwordMismatch'));
       setLoading(false);
       return;
     }
@@ -97,6 +104,22 @@ const AuthPage = () => {
                 className="absolute end-3 top-3 text-muted-foreground">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div className="relative">
+              <Lock size={16} className="absolute start-3 top-3 text-muted-foreground" />
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                placeholder={t('auth.confirmPasswordPlaceholder')}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="ps-9"
+                required
+                minLength={6}
+                autoComplete="new-password"
+              />
             </div>
           )}
 
