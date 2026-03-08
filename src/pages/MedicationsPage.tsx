@@ -149,7 +149,7 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
 
       {formModal.isOpen && (
          <div className={`fixed inset-0 bg-foreground/40 z-50 flex items-end ${formModal.isClosing ? 'animate-backdrop-out' : 'animate-backdrop-in'}`} onClick={() => formModal.close()}>
-          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto ${formModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={formModal.afterClose}>
+          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-24 max-h-[90vh] overflow-y-auto ${formModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={formModal.afterClose}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">{t('med.addNew')}</h2>
               <button onClick={() => formModal.close()} className="touch-target p-2"><X size={20} /></button>
