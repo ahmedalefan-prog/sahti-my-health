@@ -133,8 +133,8 @@ const LabResultsPage = () => {
       <AiLabImportModal open={showAiImport} onClose={() => setShowAiImport(false)} />
 
       {showForm && (
-        <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end">
-          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto animate-slide-up">
+         <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end animate-backdrop-in">
+          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto animate-sheet-up">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">{editingResult ? t('lab.editResult') : t('lab.addResult')}</h2>
               <button onClick={closeForm} className="touch-target p-2"><X size={20} /></button>
