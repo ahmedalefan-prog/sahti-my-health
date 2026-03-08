@@ -50,7 +50,7 @@ const NutritionPage = () => {
       id: generateId(), date: today, meal: selectedMeal, foodName: food.name, calories: food.calories,
       carbs: food.carbs, protein: food.protein, fat: food.fat, sodium: food.sodium, potassium: food.potassium, sugar: food.sugar,
     };
-    addFoodLogEntry(entry); setShowSearch(false); setSearch('');
+    addFoodLogEntry(entry); searchModal.close(); setSearch('');
   };
 
   const handleAddCustomFood = () => {
