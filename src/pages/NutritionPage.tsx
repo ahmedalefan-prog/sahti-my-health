@@ -157,7 +157,7 @@ const NutritionPage = () => {
         {todayLog.filter(f => f.meal === selectedMeal).length === 0 && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">{t('nut.noFood')}</p>
-            <button onClick={() => setShowSearch(true)} className="mt-2 text-primary font-semibold text-sm">{t('nut.addFoodBtn')}</button>
+            <button onClick={() => searchModal.open()} className="mt-2 text-primary font-semibold text-sm">{t('nut.addFoodBtn')}</button>
           </div>
         )}
       </div>
