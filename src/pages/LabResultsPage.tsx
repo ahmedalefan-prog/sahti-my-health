@@ -14,7 +14,7 @@ type ViewMode = 'byTest' | 'byDate';
 const LabResultsPage = () => {
   const { labResults, addLabResult, updateLabResult, removeLabResult, profile, customLabTests, addCustomLabTest } = useStore();
   const { t, tLabName, lang } = useLanguage();
-  const [showForm, setShowForm] = useState(false);
+  const formModal = useAnimatedModal();
   const [showCustomTestForm, setShowCustomTestForm] = useState(false);
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
