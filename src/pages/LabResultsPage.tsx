@@ -192,7 +192,7 @@ const LabResultsPage = () => {
         <div className="text-center py-16">
           <p className="text-6xl mb-4">🧪</p>
           <p className="text-muted-foreground text-lg">{t('lab.noResults')}</p>
-          <button onClick={() => setShowForm(true)} className="mt-4 text-primary font-semibold">{t('lab.addFirst')}</button>
+          <button onClick={() => formModal.open()} className="mt-4 text-primary font-semibold">{t('lab.addFirst')}</button>
         </div>
       ) : viewMode === 'byDate' ? (
         <div className="space-y-4">
