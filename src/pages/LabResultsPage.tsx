@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAnimatedModal } from '@/hooks/use-animated-modal';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { LAB_TESTS, getLabStatus, type LabTestDef } from '@/lib/constants';
 import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
@@ -13,7 +14,7 @@ type ViewMode = 'byTest' | 'byDate';
 const LabResultsPage = () => {
   const { labResults, addLabResult, updateLabResult, removeLabResult, profile, customLabTests, addCustomLabTest } = useStore();
   const { t, tLabName, lang } = useLanguage();
-  const [showForm, setShowForm] = useState(false);
+  const formModal = useAnimatedModal();
   const [showCustomTestForm, setShowCustomTestForm] = useState(false);
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -59,8 +60,8 @@ const LabResultsPage = () => {
     closeForm();
   };
 
-  const closeForm = () => { setShowForm(false); setEditingResult(null); setValue(''); setNotes(''); setDate(new Date().toISOString().split('T')[0]); };
-  const openEdit = (r: LabResult) => { setEditingResult(r); setSelectedTest(r.testKey); setValue(String(r.value)); setDate(r.date); setNotes(r.notes); setShowForm(true); };
+  const closeForm = () => { formModal.close(); setEditingResult(null); setValue(''); setNotes(''); setDate(new Date().toISOString().split('T')[0]); };
+  const openEdit = (r: LabResult) => { setEditingResult(r); setSelectedTest(r.testKey); setValue(String(r.value)); setDate(r.date); setNotes(r.notes); formModal.open(); };
   const handleAddCustomTest = () => {
     if (!ctName || !ctUnit || !ctMin || !ctMax) return;
     const key = 'custom_' + generateId();
@@ -110,7 +111,7 @@ const LabResultsPage = () => {
           <button onClick={() => setShowPdfImport(true)} className="h-10 px-3 rounded-xl bg-secondary flex items-center gap-1.5 touch-target text-sm font-semibold">
             <FileUp size={16} className="text-primary" /><span>{t('lab.importPdf')}</span>
           </button>
-          <button onClick={() => { setEditingResult(null); setShowForm(true); }} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+          <button onClick={() => { setEditingResult(null); formModal.open(); }} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
             <Plus className="text-primary-foreground" size={20} />
           </button>
         </div>
@@ -132,9 +133,9 @@ const LabResultsPage = () => {
       <PdfImportModal open={showPdfImport} onClose={() => setShowPdfImport(false)} />
       <AiLabImportModal open={showAiImport} onClose={() => setShowAiImport(false)} />
 
-      {showForm && (
-         <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end animate-backdrop-in">
-          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto animate-sheet-up">
+      {formModal.isOpen && (
+         <div className={`fixed inset-0 bg-foreground/40 z-50 flex items-end ${formModal.isClosing ? 'animate-backdrop-out' : 'animate-backdrop-in'}`} onClick={() => formModal.close()}>
+          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto ${formModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={formModal.afterClose}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">{editingResult ? t('lab.editResult') : t('lab.addResult')}</h2>
               <button onClick={closeForm} className="touch-target p-2"><X size={20} /></button>
@@ -191,7 +192,7 @@ const LabResultsPage = () => {
         <div className="text-center py-16">
           <p className="text-6xl mb-4">🧪</p>
           <p className="text-muted-foreground text-lg">{t('lab.noResults')}</p>
-          <button onClick={() => setShowForm(true)} className="mt-4 text-primary font-semibold">{t('lab.addFirst')}</button>
+          <button onClick={() => formModal.open()} className="mt-4 text-primary font-semibold">{t('lab.addFirst')}</button>
         </div>
       ) : viewMode === 'byDate' ? (
         <div className="space-y-4">

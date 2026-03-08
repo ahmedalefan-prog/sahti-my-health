@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useAnimatedModal } from '@/hooks/use-animated-modal';
 import { useStore, generateId, getTodayStr, type Medication, type MedicationLog } from '@/lib/store';
 import { MED_FORMS, MED_FREQUENCIES, WEEK_DAYS } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n';
@@ -75,7 +76,7 @@ import React from 'react';
 const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
   const { medications, medicationLogs, addMedication, removeMedication, addMedicationLog } = useStore();
   const { t, lang } = useLanguage();
-  const [showForm, setShowForm] = useState(false);
+  const formModal = useAnimatedModal();
   const [expandedMed, setExpandedMed] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const today = getTodayStr();
@@ -111,7 +112,7 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
       monthlyDay: form.frequency === 'monthly' ? form.monthlyDay : undefined,
     };
     addMedication(med);
-    setShowForm(false);
+    formModal.close();
     setForm(defaultForm);
     toast.success(t('med.addedSuccess'));
   };
@@ -141,17 +142,17 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
     <div className="px-4 pt-6 pb-4 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t('med.title')}</h1>
-        <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+        <button onClick={() => formModal.open()} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
           <Plus className="text-primary-foreground" size={20} />
         </button>
       </div>
 
-      {showForm && (
-         <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end animate-backdrop-in">
-          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto animate-sheet-up">
+      {formModal.isOpen && (
+         <div className={`fixed inset-0 bg-foreground/40 z-50 flex items-end ${formModal.isClosing ? 'animate-backdrop-out' : 'animate-backdrop-in'}`} onClick={() => formModal.close()}>
+          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] overflow-y-auto ${formModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={formModal.afterClose}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">{t('med.addNew')}</h2>
-              <button onClick={() => setShowForm(false)} className="touch-target p-2"><X size={20} /></button>
+              <button onClick={() => formModal.close()} className="touch-target p-2"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -287,7 +288,7 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
         <div className="text-center py-16">
           <p className="text-6xl mb-4">💊</p>
           <p className="text-muted-foreground text-lg">{t('med.noMeds')}</p>
-          <button onClick={() => setShowForm(true)} className="mt-4 text-primary font-semibold">{t('med.addFirst')}</button>
+          <button onClick={() => formModal.open()} className="mt-4 text-primary font-semibold">{t('med.addFirst')}</button>
         </div>
       ) : (
         <div className="space-y-3">

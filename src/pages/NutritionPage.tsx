@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAnimatedModal } from '@/hooks/use-animated-modal';
 import { useStore, generateId, getTodayStr, type FoodLogEntry } from '@/lib/store';
 import { FOOD_DATABASE, rateFoodForConditions, type FoodItem } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n';
@@ -15,7 +16,7 @@ const NutritionPage = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
-  const [showSearch, setShowSearch] = useState(false);
+  const searchModal = useAnimatedModal();
   const [showCustomFood, setShowCustomFood] = useState(false);
   const today = getTodayStr();
 
@@ -49,7 +50,7 @@ const NutritionPage = () => {
       id: generateId(), date: today, meal: selectedMeal, foodName: food.name, calories: food.calories,
       carbs: food.carbs, protein: food.protein, fat: food.fat, sodium: food.sodium, potassium: food.potassium, sugar: food.sugar,
     };
-    addFoodLogEntry(entry); setShowSearch(false); setSearch('');
+    addFoodLogEntry(entry); searchModal.close(); setSearch('');
   };
 
   const handleAddCustomFood = () => {
@@ -76,7 +77,7 @@ const NutritionPage = () => {
           <button onClick={() => navigate('/meal-plan')} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center touch-target">
             <Calendar size={20} className="text-primary" />
           </button>
-          <button onClick={() => setShowSearch(true)} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+          <button onClick={() => searchModal.open()} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
             <Plus className="text-primary-foreground" size={20} />
           </button>
         </div>
@@ -156,18 +157,18 @@ const NutritionPage = () => {
         {todayLog.filter(f => f.meal === selectedMeal).length === 0 && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">{t('nut.noFood')}</p>
-            <button onClick={() => setShowSearch(true)} className="mt-2 text-primary font-semibold text-sm">{t('nut.addFoodBtn')}</button>
+            <button onClick={() => searchModal.open()} className="mt-2 text-primary font-semibold text-sm">{t('nut.addFoodBtn')}</button>
           </div>
         )}
       </div>
 
       {/* Search Modal */}
-      {showSearch && (
-        <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end animate-backdrop-in">
-          <div className="bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] flex flex-col animate-sheet-up overflow-y-auto">
+      {searchModal.isOpen && (
+        <div className={`fixed inset-0 bg-foreground/40 z-50 flex items-end ${searchModal.isClosing ? 'animate-backdrop-out' : 'animate-backdrop-in'}`} onClick={() => searchModal.close()}>
+          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] flex flex-col overflow-y-auto ${searchModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={searchModal.afterClose}>
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h2 className="text-xl font-bold">{t('nut.addFood')}</h2>
-              <button onClick={() => { setShowSearch(false); setSearch(''); setShowCustomFood(false); }} className="touch-target p-2"><X size={20} /></button>
+              <button onClick={() => { searchModal.close(); setSearch(''); setShowCustomFood(false); }} className="touch-target p-2"><X size={20} /></button>
             </div>
             {!showCustomFood ? (
               <>

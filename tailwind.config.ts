@@ -99,6 +99,14 @@ export default {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
+        "backdrop-out": {
+          from: { opacity: "1" },
+          to: { opacity: "0" },
+        },
+        "sheet-down": {
+          from: { transform: "translateY(0)" },
+          to: { transform: "translateY(100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -106,7 +114,9 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-up": "slide-up 0.4s ease-out",
         "backdrop-in": "backdrop-in 0.3s ease-out",
+        "backdrop-out": "backdrop-out 0.25s ease-in forwards",
         "sheet-up": "sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+        "sheet-down": "sheet-down 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards",
       },
     },
   },
