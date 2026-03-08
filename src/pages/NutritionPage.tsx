@@ -77,7 +77,7 @@ const NutritionPage = () => {
           <button onClick={() => navigate('/meal-plan')} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center touch-target">
             <Calendar size={20} className="text-primary" />
           </button>
-          <button onClick={() => setShowSearch(true)} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+          <button onClick={() => searchModal.open()} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
             <Plus className="text-primary-foreground" size={20} />
           </button>
         </div>
