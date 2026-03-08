@@ -165,7 +165,7 @@ const NutritionPage = () => {
       {/* Search Modal */}
       {searchModal.isOpen && (
         <div className={`fixed inset-0 bg-foreground/40 z-50 flex items-end ${searchModal.isClosing ? 'animate-backdrop-out' : 'animate-backdrop-in'}`} onClick={() => searchModal.close()}>
-          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-8 max-h-[90vh] flex flex-col overflow-y-auto ${searchModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={searchModal.afterClose}>
+          <div className={`bg-card w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-24 max-h-[90vh] flex flex-col overflow-y-auto ${searchModal.isClosing ? 'animate-sheet-down' : 'animate-sheet-up'}`} onClick={e => e.stopPropagation()} onAnimationEnd={searchModal.afterClose}>
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h2 className="text-xl font-bold">{t('nut.addFood')}</h2>
               <button onClick={() => { searchModal.close(); setSearch(''); setShowCustomFood(false); }} className="touch-target p-2"><X size={20} /></button>
