@@ -112,7 +112,7 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
       monthlyDay: form.frequency === 'monthly' ? form.monthlyDay : undefined,
     };
     addMedication(med);
-    setShowForm(false);
+    formModal.close();
     setForm(defaultForm);
     toast.success(t('med.addedSuccess'));
   };
