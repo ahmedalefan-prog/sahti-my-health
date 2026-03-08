@@ -111,7 +111,7 @@ const LabResultsPage = () => {
           <button onClick={() => setShowPdfImport(true)} className="h-10 px-3 rounded-xl bg-secondary flex items-center gap-1.5 touch-target text-sm font-semibold">
             <FileUp size={16} className="text-primary" /><span>{t('lab.importPdf')}</span>
           </button>
-          <button onClick={() => { setEditingResult(null); setShowForm(true); }} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+          <button onClick={() => { setEditingResult(null); formModal.open(); }} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
             <Plus className="text-primary-foreground" size={20} />
           </button>
         </div>
