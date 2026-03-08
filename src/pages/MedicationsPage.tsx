@@ -76,7 +76,7 @@ import React from 'react';
 const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
   const { medications, medicationLogs, addMedication, removeMedication, addMedicationLog } = useStore();
   const { t, lang } = useLanguage();
-  const [showForm, setShowForm] = useState(false);
+  const formModal = useAnimatedModal();
   const [expandedMed, setExpandedMed] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const today = getTodayStr();
