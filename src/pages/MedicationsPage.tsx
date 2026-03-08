@@ -142,7 +142,7 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
     <div className="px-4 pt-6 pb-4 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t('med.title')}</h1>
-        <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
+        <button onClick={() => formModal.open()} className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center touch-target">
           <Plus className="text-primary-foreground" size={20} />
         </button>
       </div>
