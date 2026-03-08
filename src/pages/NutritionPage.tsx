@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAnimatedModal } from '@/hooks/use-animated-modal';
 import { useStore, generateId, getTodayStr, type FoodLogEntry } from '@/lib/store';
 import { FOOD_DATABASE, rateFoodForConditions, type FoodItem } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n';
