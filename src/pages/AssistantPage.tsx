@@ -321,18 +321,17 @@ ${mealFormData.dislikes ? 'لا أحب: ' + mealFormData.dislikes : ''}
         </div>
       </div>
 
-      {/* Quick Actions Grid */}
+      {/* Quick Actions */}
       <div className="px-4 mb-3 flex-shrink-0">
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {quickActions.map(action => (
             <button
               key={action.key}
               onClick={() => handleQuickAction(action.key)}
-              className={`${action.bg} border ${action.border} rounded-2xl p-3.5 text-start transition-transform active:scale-95`}
+              className={`${action.bg} border ${action.border} rounded-xl px-3 py-2 flex items-center gap-2 whitespace-nowrap transition-transform active:scale-95`}
             >
-              <span className="text-2xl">{action.emoji}</span>
-              <p className="font-bold text-sm mt-2">{action.label}</p>
-              <p className="text-xs text-muted-foreground">{action.subtitle}</p>
+              <span className="text-base">{action.emoji}</span>
+              <span className="font-semibold text-xs">{action.label} {action.subtitle}</span>
             </button>
           ))}
         </div>
