@@ -288,7 +288,7 @@ const MedicationsPage = React.forwardRef<HTMLDivElement>((_, ref) => {
         <div className="text-center py-16">
           <p className="text-6xl mb-4">💊</p>
           <p className="text-muted-foreground text-lg">{t('med.noMeds')}</p>
-          <button onClick={() => setShowForm(true)} className="mt-4 text-primary font-semibold">{t('med.addFirst')}</button>
+          <button onClick={() => formModal.open()} className="mt-4 text-primary font-semibold">{t('med.addFirst')}</button>
         </div>
       ) : (
         <div className="space-y-3">
