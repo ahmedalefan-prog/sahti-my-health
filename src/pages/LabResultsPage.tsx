@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAnimatedModal } from '@/hooks/use-animated-modal';
 import { useStore, generateId, type LabResult } from '@/lib/store';
 import { LAB_TESTS, getLabStatus, type LabTestDef } from '@/lib/constants';
 import { PDF_LAB_MAPPINGS } from '@/lib/pdfLabMapping';
