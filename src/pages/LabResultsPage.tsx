@@ -60,8 +60,8 @@ const LabResultsPage = () => {
     closeForm();
   };
 
-  const closeForm = () => { setShowForm(false); setEditingResult(null); setValue(''); setNotes(''); setDate(new Date().toISOString().split('T')[0]); };
-  const openEdit = (r: LabResult) => { setEditingResult(r); setSelectedTest(r.testKey); setValue(String(r.value)); setDate(r.date); setNotes(r.notes); setShowForm(true); };
+  const closeForm = () => { formModal.close(); setEditingResult(null); setValue(''); setNotes(''); setDate(new Date().toISOString().split('T')[0]); };
+  const openEdit = (r: LabResult) => { setEditingResult(r); setSelectedTest(r.testKey); setValue(String(r.value)); setDate(r.date); setNotes(r.notes); formModal.open(); };
   const handleAddCustomTest = () => {
     if (!ctName || !ctUnit || !ctMin || !ctMax) return;
     const key = 'custom_' + generateId();
