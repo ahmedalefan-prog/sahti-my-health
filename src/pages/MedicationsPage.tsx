@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useAnimatedModal } from '@/hooks/use-animated-modal';
 import { useStore, generateId, getTodayStr, type Medication, type MedicationLog } from '@/lib/store';
 import { MED_FORMS, MED_FREQUENCIES, WEEK_DAYS } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n';
