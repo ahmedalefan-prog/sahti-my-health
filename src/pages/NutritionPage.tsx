@@ -16,7 +16,7 @@ const NutritionPage = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
-  const [showSearch, setShowSearch] = useState(false);
+  const searchModal = useAnimatedModal();
   const [showCustomFood, setShowCustomFood] = useState(false);
   const today = getTodayStr();
 
